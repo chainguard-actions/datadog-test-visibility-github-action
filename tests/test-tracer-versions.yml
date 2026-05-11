@@ -1,0 +1,44 @@
+name: Test tracer version inputs and java-instrumented-build-system
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: java
+          api_key: fake-api-key-for-testing
+          dotnet-tracer-version: "3.0.0"
+          java-tracer-version: "1.30.0"
+          js-tracer-version: "5.0.0"
+          python-tracer-version: "2.0.0"
+          ruby-tracer-version: "1.0.0"
+          go-tracer-version: "0.48.0"
+          java-instrumented-build-system: gradle
+          cache: "false"
+          print-github-step-summary: "false"
+
+      - name: Assert DD_API_KEY is set
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY should be set"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
