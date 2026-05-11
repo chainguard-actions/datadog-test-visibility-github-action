@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v2.5.0 | [`v2.5.0`](https://github.com/chainguard-actions/test-visibility-github-action/tree/v2.5.0) | — |
 | v2.8.0 | [`v2.8.0`](https://github.com/chainguard-actions/test-visibility-github-action/tree/v2.8.0) | — |
 
 ## Privacy
