@@ -1,0 +1,46 @@
+name: Test deprecated inputs api-key and service-name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          languages: python
+          api-key: fake-api-key-deprecated
+          service-name: my-deprecated-service
+
+      - name: Assert DD_API_KEY env var was set via deprecated api-key input
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY was not set"
+            exit 1
+          fi
+          echo "PASS: DD_API_KEY is set"
+
+      - name: Assert DD_SERVICE env var was set via deprecated service-name input
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ -z "$DD_SERVICE" ]; then
+            echo "FAIL: DD_SERVICE was not set"
+            exit 1
+          fi
+          echo "PASS: DD_SERVICE is set"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER env var was set
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github"
+            exit 1
+          fi
+          echo "PASS"
