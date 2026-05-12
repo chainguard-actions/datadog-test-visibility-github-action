@@ -1,0 +1,31 @@
+name: Test deprecated api-key and service-name inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: python
+          api-key: fake-api-key-deprecated
+          service-name: my-deprecated-service
+          print-github-step-summary: "false"
+      - name: Assert DD_API_KEY is set via deprecated api-key input
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY should be set via deprecated api-key input"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert DD_SERVICE is set via deprecated service-name input
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-deprecated-service" ]; then
+            echo "FAIL: expected DD_SERVICE=my-deprecated-service, got $DD_SERVICE"
+            exit 1
+          fi
+          echo "PASS"

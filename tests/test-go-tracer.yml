@@ -1,0 +1,20 @@
+name: Test go tracer version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: go
+          api_key: fake-api-key-for-testing
+          go-tracer-version: "latest"
+          cache: "false"
+          print-github-step-summary: "false"
+      - name: Assert action completed successfully with go language
+        run: |
+          echo "Action completed with go language and go-tracer-version input"
+          echo "PASS"

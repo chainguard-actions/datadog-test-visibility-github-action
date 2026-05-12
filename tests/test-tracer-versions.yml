@@ -1,0 +1,24 @@
+name: Test tracer version inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: python
+          api_key: fake-api-key-for-testing
+          dotnet-tracer-version: "2.0.0"
+          java-tracer-version: "1.0.0"
+          js-tracer-version: "3.0.0"
+          python-tracer-version: "2.1.0"
+          ruby-tracer-version: "1.5.0"
+          java-instrumented-build-system: gradle
+          print-github-step-summary: "false"
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed with tracer version inputs"
+          echo "PASS"
