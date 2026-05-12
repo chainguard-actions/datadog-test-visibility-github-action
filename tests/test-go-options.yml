@@ -1,0 +1,33 @@
+name: Test Go tracer options
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: go
+          api_key: fake-api-key-for-testing
+          go-tracer-version: "0.13.0"
+          go-module-dir: "."
+          cache: "false"
+        continue-on-error: true
+      - name: Assert DD_API_KEY is set
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY should be set"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected provider=github"
+            exit 1
+          fi
+          echo "PASS"
