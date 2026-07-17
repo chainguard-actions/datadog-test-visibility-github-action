@@ -13,6 +13,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v2.6.0 | [`v2.6.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.6.0) | — |
 | v2.7.0 | [`v2.7.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.7.0) | — |
 | v2.8.0 | [`v2.8.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.8.0) | — |
+| v2.9.0 | [`v2.9.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.9.0) | [`a06d552`](https://github.com/datadog/test-visibility-github-action/commit/a06d552ea316e44c261701eb4fd2078b2b1ab702) |
 
 ## Privacy
 
