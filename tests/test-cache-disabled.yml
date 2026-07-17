@@ -1,0 +1,44 @@
+name: Test with cache disabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: js
+          api_key: fake-api-key-for-testing
+          cache: false
+
+      - name: Assert DD_API_KEY is set
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY is not set"
+            exit 1
+          fi
+          echo "PASS: DD_API_KEY is set"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert .datadog directory was created
+        run: |
+          if [ ! -d "$GITHUB_WORKSPACE/.datadog" ]; then
+            echo "FAIL: .datadog directory was not created"
+            exit 1
+          fi
+          echo "PASS: .datadog directory exists"

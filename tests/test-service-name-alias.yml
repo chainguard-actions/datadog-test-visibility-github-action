@@ -1,0 +1,36 @@
+name: Test deprecated service-name input alias
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: js
+          api_key: fake-api-key-for-testing
+          service-name: my-legacy-service
+
+      - name: Assert DD_SERVICE is set via deprecated service-name input
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-legacy-service" ]; then
+            echo "FAIL: expected 'my-legacy-service', got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS: DD_SERVICE correctly set from deprecated service-name input"
+
+      - name: Assert DD_API_KEY is set
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY is not set"
+            exit 1
+          fi
+          echo "PASS"

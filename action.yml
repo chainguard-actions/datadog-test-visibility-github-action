@@ -1,0 +1,248 @@
+name: 'Configure Datadog Test Visibility'
+description: 'Installs Datadog tracers for configured languages and enables Test Visibility'
+branding:
+  icon: 'bar-chart'
+  color: 'purple'
+inputs:
+  languages:
+    description: 'List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby", "go" (multiple languages can be specified as a space-separated list).'
+    required: true
+  api_key:
+    description: 'Datadog API key. Can be found at https://app.datadoghq.com/organization-settings/api-keys'
+    required: true
+  site:
+    description: 'Datadog site (optional). See https://docs.datadoghq.com/getting_started/site for more information about sites.'
+    required: false
+    default: datadoghq.com
+  service:
+    description: 'The name of the service or library being tested.'
+    required: false
+  dotnet-tracer-version:
+    description: 'The version of Datadog .NET tracer to use (optional). Defaults to the latest release.'
+    required: false
+  java-tracer-version:
+    description: 'The version of Datadog Java tracer to use (optional). Defaults to the latest release.'
+    required: false
+  js-tracer-version:
+    description: 'The version of Datadog JS tracer to use (optional). Defaults to the latest release.'
+    required: false
+  python-tracer-version:
+    description: 'The version of Datadog Python tracer to use (optional). Defaults to the latest release.'
+    required: false
+  python-coverage-version:
+    description: 'The version of the Python coverage package to use (optional). Defaults to 7.13.5.'
+    required: false
+  ruby-tracer-version:
+    description: 'The version of datadog-ci Ruby gem to use (optional). Defaults to the latest release.'
+    required: false
+  go-tracer-version:
+    description: 'The version of Orchestrion automatic compile-time instrumentation of Go code (https://github.com/datadog/orchestrion) to use (optional). Defaults to the latest release.'
+    required: false
+  go-module-dir:
+    description: 'Path to the Go module root directory to instrument (optional). Use this when the repository contains multiple Go modules or the Go module is not in the workspace root.'
+    required: false
+  java-instrumented-build-system:
+    description: 'If provided, only the specified build systems will be instrumented (allowed values are `gradle` and `maven`). Otherwise every Java process will be instrumented.'
+    required: false
+  java-tracer-repository-url:
+    description: 'Base URL of a Maven repository (or proxy/mirror) used to download the Java tracer JAR and its sha256. The path under the base must follow the standard Maven layout for `com.datadoghq:dd-java-agent`. Defaults to Maven Central.'
+    required: false
+  java-tracer-repository-auth-header:
+    description: 'Optional HTTP header used to authenticate against `java-tracer-repository-url`, provided as a complete `Name: Value` string (e.g. `Authorization: Bearer <token>`). Only used when `java-tracer-repository-url` is set. Redirects are not followed when this option is set.'
+    required: false
+  cache:
+    description: 'Enable caching (optional). Defaults to true.'
+    required: false
+    type: boolean
+    default: true
+  print-github-step-summary:
+    description: 'Print a summary of the installed tracers to the GitHub step summary, otherwise the summary is printed to console (optional). Defaults to true.'
+    required: false
+    type: boolean
+    default: true
+  # deprecated inputs
+  service-name:
+    description: 'Deprecated, alias for service'
+    required: false
+    deprecationMessage: 'service-name input is deprecated, please use service instead'
+  api-key:
+    description: 'Deprecated, alias for api_key'
+    required: false
+    deprecationMessage: 'api-key input is deprecated, please use api_key instead'
+runs:
+  using: 'composite'
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - name: Set global envs and github path
+      run: |
+        echo "INSTALLATION_SCRIPT_URL=$INSTALLATION_SCRIPT_URL" >> $GITHUB_ENV
+        echo "INSTALLATION_SCRIPT_CHECKSUM=$INSTALLATION_SCRIPT_CHECKSUM" >> $GITHUB_ENV
+        safe_check_run_id=$(printf '%s' "$JOB_CHECK_RUN_ID" | tr -d '\n\r')
+        echo "JOB_CHECK_RUN_ID=$safe_check_run_id" >> $GITHUB_ENV
+        safe_action_path=$(printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r')
+        echo "$safe_action_path" >> $GITHUB_PATH
+      shell: bash
+      env:
+        INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v14.sh
+        INSTALLATION_SCRIPT_CHECKSUM: 73824cfac695ed17177b4a2fc0b9afb3b19b639d27a20166190bf8997248423b
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+        JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+    - name: Get Go cache directories
+      if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
+      id: go-cache-paths
+      shell: bash
+      run: |
+        echo "TAR_OPTIONS=--skip-old-files" >> $GITHUB_ENV
+        echo "GOMODCACHE_PATH=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+        echo "GOCACHE_PATH=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+        echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
+        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
+    - name: Go cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 v4
+      if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
+      id: go-cache
+      with:
+        path: |
+          ${{ steps.go-cache-paths.outputs.GOMODCACHE_PATH }}
+          ${{ env.GITHUB_WORKSPACE }}/.datadog
+          /github/workspace/.datadog
+          ${{ steps.go-cache-paths.outputs.GOPATH }}/bin/orchestrion
+        key: test-optimization-go-${{ env.INSTALLATION_SCRIPT_CHECKSUM }}-${{ steps.go-cache-paths.outputs.GOVERSION }}-${{ inputs.go-tracer-version }}-${{ hashFiles('**/go.mod') }}-${{ hashFiles('**/go.sum') }}
+    - name: Download and run configuration script
+      id: run-configuration-script
+      run: |
+        mkdir -p $GITHUB_WORKSPACE/.datadog
+
+        if [ "$GITHUB_WORKSPACE" != "/github/workspace" ] && mkdir -p /github/workspace >/dev/null 2>&1; then
+          # See https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action#accessing-files-created-by-a-container-action
+          # When running a Docker container action, the Github workspace is available at a hard-coded path of /github/workspace
+          # When running a "regular", the workspace path varies.
+          # The symlink trick below is needed to make the same path /github/workspace/.datadog available for all types of actions
+          if [ ! -e /github/workspace/.datadog ]; then
+            ln -s $GITHUB_WORKSPACE/.datadog /github/workspace/.datadog
+          fi
+          export DD_TRACER_FOLDER=/github/workspace/.datadog
+        else
+          export DD_TRACER_FOLDER=$GITHUB_WORKSPACE/.datadog
+        fi
+
+        script_filepath="install_test_visibility.sh"
+
+        if command -v curl >/dev/null 2>&1; then
+          curl -Lo "$script_filepath" "$INSTALLATION_SCRIPT_URL"
+        elif command -v wget >/dev/null 2>&1; then
+          wget -O "$script_filepath" "$INSTALLATION_SCRIPT_URL"
+        else
+          >&2 echo "Error: Neither wget nor curl is installed."
+          exit 1
+        fi
+
+        if command -v sha256sum >/dev/null 2>&1; then
+          if ! echo "$INSTALLATION_SCRIPT_CHECKSUM  $script_filepath" | sha256sum -c -; then
+            exit 1
+          fi
+        elif command -v shasum >/dev/null 2>&1; then
+          if ! echo "$INSTALLATION_SCRIPT_CHECKSUM  $script_filepath" | shasum -a 256 -c -; then
+            exit 1
+          fi
+        else
+          >&2 echo "Error: Neither sha256sum nor shasum is installed."
+          exit 1
+        fi
+
+        chmod +x $script_filepath
+        ./$script_filepath >> "$GITHUB_ENV"
+      shell: bash
+      env:
+        DD_CIVISIBILITY_INSTRUMENTATION_LANGUAGES: ${{ inputs.languages }}
+        DD_API_KEY: ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}
+        DD_SITE: ${{ inputs.site }}
+        DD_SET_TRACER_VERSION_DOTNET: ${{ inputs.dotnet-tracer-version }}
+        DD_SET_TRACER_VERSION_JAVA: ${{ inputs.java-tracer-version }}
+        DD_SET_TRACER_VERSION_JS: ${{ inputs.js-tracer-version }}
+        DD_SET_TRACER_VERSION_PYTHON: ${{ inputs.python-tracer-version }}
+        DD_SET_COVERAGE_VERSION_PYTHON: ${{ inputs.python-coverage-version }}
+        DD_SET_TRACER_VERSION_RUBY: ${{ inputs.ruby-tracer-version }}
+        DD_SET_TRACER_VERSION_GO: ${{ inputs.go-tracer-version }}
+        DD_CIVISIBILITY_GO_MODULE_DIR: ${{ inputs.go-module-dir }}
+        DD_INSTRUMENTATION_BUILD_SYSTEM_JAVA: ${{ inputs.java-instrumented-build-system }}
+        DD_SET_TRACER_REPOSITORY_URL_JAVA: ${{ inputs.java-tracer-repository-url }}
+        DD_SET_AUTH_HEADER_JAVA: ${{ inputs.java-tracer-repository-auth-header }}
+    - name: Propagate optional site input to environment variable
+      if: "${{ inputs.site != '' }}"
+      run: |
+        safe_site=$(printf '%s' "$INPUT_SITE" | tr -d '\n\r')
+        echo "DD_SITE=$safe_site" >> "$GITHUB_ENV"
+      shell: bash
+      env:
+        INPUT_SITE: ${{ inputs.site }}
+    - name: Propagate optional service input to environment variable
+      if: "${{ inputs.service != '' || inputs.service-name != '' }}"
+      run: |
+        service_value="${INPUT_SERVICE_NAME:-$INPUT_SERVICE}"
+        safe_service=$(printf '%s' "$service_value" | tr -d '\n\r')
+        echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
+      shell: bash
+      env:
+        INPUT_SERVICE_NAME: ${{ inputs.service-name }}
+        INPUT_SERVICE: ${{ inputs.service }}
+    - name: Propagate API key from input to environment variables and set provider
+      run: |
+        api_key_value="${INPUT_API_KEY_DEPRECATED:-$INPUT_API_KEY}"
+        safe_api_key=$(printf '%s' "$api_key_value" | tr -d '\n\r')
+        echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
+        echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
+      shell: bash
+      env:
+        INPUT_API_KEY_DEPRECATED: ${{ inputs.api-key }}
+        INPUT_API_KEY: ${{ inputs.api_key }}
+    - name: Print summary
+      run: |
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo '<a target="_blank" title="Datadog Test Visibility" href="https://docs.datadoghq.com/tests/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/DataDog/test-visibility-github-action/main/logos/dd_logo_h_white.svg"><img width="200" alt="Datadog Test Visibility" src="https://raw.githubusercontent.com/DataDog/test-visibility-github-action/main/logos/dd_logo_h_rgb.svg"></picture></a>' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Installed Test Visibility libraries:" >> $GITHUB_STEP_SUMMARY
+
+        if [ ! -z "$DD_TRACER_VERSION_DOTNET" ]; then
+          echo "- __.NET:__ $DD_TRACER_VERSION_DOTNET" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ ! -z "$DD_TRACER_VERSION_JAVA" ]; then
+          echo "- __Java:__ $DD_TRACER_VERSION_JAVA" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ ! -z "$DD_TRACER_VERSION_JS" ]; then
+          echo "- __JS:__ $DD_TRACER_VERSION_JS" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ ! -z "$DD_TRACER_VERSION_PYTHON" ]; then
+          echo "- __Python:__ $DD_TRACER_VERSION_PYTHON" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ ! -z "$DD_TRACER_VERSION_RUBY" ]; then
+          echo "- __Ruby:__ $DD_TRACER_VERSION_RUBY" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ ! -z "$DD_TRACER_VERSION_GO" ]; then
+          echo "- __Go:__ $DD_TRACER_VERSION_GO" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "---" >> $GITHUB_STEP_SUMMARY
+
+        if [ "$PRINT_GITHUB_STEP_SUMMARY" == "false" ]; then
+          cat $GITHUB_STEP_SUMMARY
+          rm -f $GITHUB_STEP_SUMMARY
+        fi
+      shell: bash
+      env:
+        PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}

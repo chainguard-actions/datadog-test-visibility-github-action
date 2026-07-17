@@ -1,0 +1,39 @@
+name: Test deprecated api-key input alias
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: js
+          api-key: deprecated-key-for-testing
+
+      - name: Assert DD_API_KEY is set via deprecated api-key input
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY is not set when using deprecated api-key input"
+            exit 1
+          fi
+          if [ "$DD_API_KEY" != "deprecated-key-for-testing" ]; then
+            echo "FAIL: expected 'deprecated-key-for-testing', got '$DD_API_KEY'"
+            exit 1
+          fi
+          echo "PASS: DD_API_KEY correctly set from deprecated api-key input"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
