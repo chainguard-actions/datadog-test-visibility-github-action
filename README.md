@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v2.10.0 | [`v2.10.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.10.0) | [`4e7afb0`](https://github.com/datadog/test-visibility-github-action/commit/4e7afb05b464fd349275e41e65a7f4de83e7f46b) |
 | v2.4.1 | [`v2.4.1`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.4.1) | — |
 | v2.5.0 | [`v2.5.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.5.0) | — |
 | v2.6.0 | [`v2.6.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v2.6.0) | — |
