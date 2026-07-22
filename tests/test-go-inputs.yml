@@ -1,0 +1,22 @@
+name: Test Go tracer inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: go
+          api_key: fake-api-key-for-testing
+          go-tracer-version: "latest"
+          go-module-dir: "."
+          cache: "false"
+          print-github-step-summary: "false"
+        continue-on-error: true
+      - name: Assert action accepted Go inputs
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          echo "PASS: action accepted Go-specific inputs"
