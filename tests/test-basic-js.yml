@@ -1,0 +1,46 @@
+name: Test basic JS language instrumentation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: js
+          api_key: test-api-key-12345
+          site: datadoghq.com
+
+      - name: Assert DD_API_KEY is set
+        run: |
+          echo "actual DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY is not set"
+            exit 1
+          fi
+          if [ "$DD_API_KEY" != "test-api-key-12345" ]; then
+            echo "FAIL: expected DD_API_KEY='test-api-key-12345', got '$DD_API_KEY'"
+            exit 1
+          fi
+          echo "PASS: DD_API_KEY is set correctly"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+        run: |
+          echo "actual DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER='github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS: DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set correctly"
+
+      - name: Assert DD_SITE is set
+        run: |
+          echo "actual DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.com" ]; then
+            echo "FAIL: expected DD_SITE='datadoghq.com', got '$DD_SITE'"
+            exit 1
+          fi
+          echo "PASS: DD_SITE is set correctly"
