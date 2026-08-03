@@ -1,4 +1,4 @@
-name: Test tracer version inputs (js, python, ruby, dotnet)
+name: Test no service input - DD_SERVICE should not be set
 on:
   workflow_dispatch:
 jobs:
@@ -10,13 +10,10 @@ jobs:
       # Create a fake curl that serves a minimal install script and honors -o flag
       - name: Set up mock curl and sha256sum
         run: |
-          # Create a minimal fake install script that outputs tracer version env vars
+          # Create a minimal fake install script
           cat > /tmp/fake-install.sh << 'FAKESCRIPT'
           #!/bin/sh
-          echo "DD_TRACER_VERSION_JS=${DD_SET_TRACER_VERSION_JS:-5.0.0}"
-          echo "DD_TRACER_VERSION_PYTHON=${DD_SET_TRACER_VERSION_PYTHON:-2.0.0}"
-          echo "DD_TRACER_VERSION_RUBY=${DD_SET_TRACER_VERSION_RUBY:-1.0.0}"
-          echo "DD_TRACER_VERSION_DOTNET=${DD_SET_TRACER_VERSION_DOTNET:-3.0.0}"
+          echo "DD_TRACER_VERSION_JAVA=1.30.0"
           FAKESCRIPT
           chmod +x /tmp/fake-install.sh
 
@@ -64,13 +61,27 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js python ruby dotnet
-          api_key: test-api-key-12345
-          site: datadoghq.com
-          js-tracer-version: 5.1.0
-          python-tracer-version: 2.3.0
-          ruby-tracer-version: 1.5.0
-          dotnet-tracer-version: 3.2.0
+          languages: java
+          api_key: test-api-key-java
+          # No service input provided - DD_SERVICE should not be set
+
+      - name: Assert DD_SERVICE is not set when no service input given
+        run: |
+          echo "actual DD_SERVICE: '$DD_SERVICE'"
+          if [ -n "$DD_SERVICE" ]; then
+            echo "FAIL: DD_SERVICE should not be set, but got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS: DD_SERVICE is not set as expected"
+
+      - name: Assert DD_SITE defaults to datadoghq.com
+        run: |
+          echo "actual DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.com" ]; then
+            echo "FAIL: expected default 'datadoghq.com', got '$DD_SITE'"
+            exit 1
+          fi
+          echo "PASS"
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -79,13 +90,13 @@ jobs:
             echo "FAIL: DD_API_KEY is not set"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set"
+          echo "PASS"
 
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+      - name: Assert provider is github
         run: |
           echo "actual: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            echo "FAIL: expected 'github'"
             exit 1
           fi
           echo "PASS"

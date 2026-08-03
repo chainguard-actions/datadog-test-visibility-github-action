@@ -1,0 +1,36 @@
+name: Test deprecated service-name input alias
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: python
+          api_key: fake-api-key-for-testing
+          service-name: my-legacy-service
+
+      - name: Assert DD_SERVICE is set from deprecated service-name input
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-legacy-service" ]; then
+            echo "FAIL: expected 'my-legacy-service', got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"

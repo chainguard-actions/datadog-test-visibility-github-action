@@ -1,4 +1,4 @@
-name: Test tracer version inputs (js, python, ruby, dotnet)
+name: Test custom site and service inputs
 on:
   workflow_dispatch:
 jobs:
@@ -10,13 +10,10 @@ jobs:
       # Create a fake curl that serves a minimal install script and honors -o flag
       - name: Set up mock curl and sha256sum
         run: |
-          # Create a minimal fake install script that outputs tracer version env vars
+          # Create a minimal fake install script
           cat > /tmp/fake-install.sh << 'FAKESCRIPT'
           #!/bin/sh
-          echo "DD_TRACER_VERSION_JS=${DD_SET_TRACER_VERSION_JS:-5.0.0}"
-          echo "DD_TRACER_VERSION_PYTHON=${DD_SET_TRACER_VERSION_PYTHON:-2.0.0}"
-          echo "DD_TRACER_VERSION_RUBY=${DD_SET_TRACER_VERSION_RUBY:-1.0.0}"
-          echo "DD_TRACER_VERSION_DOTNET=${DD_SET_TRACER_VERSION_DOTNET:-3.0.0}"
+          echo "DD_TRACER_VERSION_PYTHON=2.0.0"
           FAKESCRIPT
           chmod +x /tmp/fake-install.sh
 
@@ -31,6 +28,7 @@ jobs:
             case "$prev" in
               -o|--output) out="$arg" ;;
             esac
+            # Handle -Lo <file> pattern
             case "$arg" in
               -Lo)
                 prev="-o"
@@ -64,28 +62,43 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js python ruby dotnet
-          api_key: test-api-key-12345
-          site: datadoghq.com
-          js-tracer-version: 5.1.0
-          python-tracer-version: 2.3.0
-          ruby-tracer-version: 1.5.0
-          dotnet-tracer-version: 3.2.0
+          languages: python
+          api_key: test-api-key-99999
+          site: datadoghq.eu
+          service: my-python-service
+
+      - name: Assert DD_SITE is set to custom EU site
+        run: |
+          echo "actual DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.eu" ]; then
+            echo "FAIL: expected 'datadoghq.eu', got '$DD_SITE'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SERVICE is set to custom service name
+        run: |
+          echo "actual DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-python-service" ]; then
+            echo "FAIL: expected 'my-python-service', got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS"
 
       - name: Assert DD_API_KEY is set
         run: |
-          echo "actual DD_API_KEY: $DD_API_KEY"
+          echo "actual DD_API_KEY length: ${#DD_API_KEY}"
           if [ -z "$DD_API_KEY" ]; then
             echo "FAIL: DD_API_KEY is not set"
             exit 1
           fi
           echo "PASS: DD_API_KEY is set"
 
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+      - name: Assert provider is github
         run: |
           echo "actual: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            echo "FAIL: expected 'github'"
             exit 1
           fi
           echo "PASS"

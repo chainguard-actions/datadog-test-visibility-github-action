@@ -1,4 +1,4 @@
-name: Test tracer version inputs (js, python, ruby, dotnet)
+name: Test basic JS language instrumentation
 on:
   workflow_dispatch:
 jobs:
@@ -10,34 +10,34 @@ jobs:
       # Create a fake curl that serves a minimal install script and honors -o flag
       - name: Set up mock curl and sha256sum
         run: |
-          # Create a minimal fake install script that outputs tracer version env vars
+          # Create a minimal fake install script that outputs env vars to GITHUB_ENV
           cat > /tmp/fake-install.sh << 'FAKESCRIPT'
           #!/bin/sh
-          echo "DD_TRACER_VERSION_JS=${DD_SET_TRACER_VERSION_JS:-5.0.0}"
-          echo "DD_TRACER_VERSION_PYTHON=${DD_SET_TRACER_VERSION_PYTHON:-2.0.0}"
-          echo "DD_TRACER_VERSION_RUBY=${DD_SET_TRACER_VERSION_RUBY:-1.0.0}"
-          echo "DD_TRACER_VERSION_DOTNET=${DD_SET_TRACER_VERSION_DOTNET:-3.0.0}"
+          # Fake install script: outputs tracer version env vars
+          echo "DD_TRACER_VERSION_JS=5.0.0"
           FAKESCRIPT
           chmod +x /tmp/fake-install.sh
 
+          # Create fake curl that serves the fake install script
           mkdir -p /tmp/fake-bin
-
-          # Fake curl that honors -Lo and -o flags
           cat > /tmp/fake-bin/curl << 'FAKECURL'
           #!/bin/sh
+          # Fake curl: honor -o/--output flag
           out=""
           prev=""
           for arg in "$@"; do
             case "$prev" in
-              -o|--output) out="$arg" ;;
-            esac
-            case "$arg" in
-              -Lo)
-                prev="-o"
-                continue
-                ;;
+              -o|--output|-Lo) out="$arg" ;;
             esac
             prev="$arg"
+          done
+          # Also handle -Lo as a combined flag
+          for arg in "$@"; do
+            case "$arg" in
+              -Lo)
+                # next arg is the output file - handled above
+                ;;
+            esac
           done
           if [ -n "$out" ]; then
             cat /tmp/fake-install.sh > "$out"
@@ -48,13 +48,15 @@ jobs:
           FAKECURL
           chmod +x /tmp/fake-bin/curl
 
-          # Fake sha256sum that always passes checksum verification
+          # Create fake sha256sum that always succeeds
           cat > /tmp/fake-bin/sha256sum << 'FAKECHECKSUM'
           #!/bin/sh
-          if echo "$*" | grep -q -- '-c'; then
+          # If called with -c, always succeed
+          if echo "$@" | grep -q -- '-c'; then
             echo "install_test_visibility.sh: OK"
             exit 0
           fi
+          # Otherwise compute real checksum
           exec /usr/bin/sha256sum "$@"
           FAKECHECKSUM
           chmod +x /tmp/fake-bin/sha256sum
@@ -64,13 +66,10 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js python ruby dotnet
+          languages: js
           api_key: test-api-key-12345
           site: datadoghq.com
-          js-tracer-version: 5.1.0
-          python-tracer-version: 2.3.0
-          ruby-tracer-version: 1.5.0
-          dotnet-tracer-version: 3.2.0
+          service: my-test-service
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -86,6 +85,24 @@ jobs:
           echo "actual: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
             echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SITE is set
+        run: |
+          echo "actual DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.com" ]; then
+            echo "FAIL: expected 'datadoghq.com', got '$DD_SITE'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SERVICE is set
+        run: |
+          echo "actual DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-test-service" ]; then
+            echo "FAIL: expected 'my-test-service', got '$DD_SERVICE'"
             exit 1
           fi
           echo "PASS"

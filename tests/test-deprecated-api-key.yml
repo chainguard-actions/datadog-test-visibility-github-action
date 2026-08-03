@@ -1,4 +1,4 @@
-name: Test tracer version inputs (js, python, ruby, dotnet)
+name: Test deprecated api-key input alias
 on:
   workflow_dispatch:
 jobs:
@@ -10,13 +10,10 @@ jobs:
       # Create a fake curl that serves a minimal install script and honors -o flag
       - name: Set up mock curl and sha256sum
         run: |
-          # Create a minimal fake install script that outputs tracer version env vars
+          # Create a minimal fake install script
           cat > /tmp/fake-install.sh << 'FAKESCRIPT'
           #!/bin/sh
-          echo "DD_TRACER_VERSION_JS=${DD_SET_TRACER_VERSION_JS:-5.0.0}"
-          echo "DD_TRACER_VERSION_PYTHON=${DD_SET_TRACER_VERSION_PYTHON:-2.0.0}"
-          echo "DD_TRACER_VERSION_RUBY=${DD_SET_TRACER_VERSION_RUBY:-1.0.0}"
-          echo "DD_TRACER_VERSION_DOTNET=${DD_SET_TRACER_VERSION_DOTNET:-3.0.0}"
+          echo "DD_TRACER_VERSION_JS=4.0.0"
           FAKESCRIPT
           chmod +x /tmp/fake-install.sh
 
@@ -64,28 +61,24 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js python ruby dotnet
-          api_key: test-api-key-12345
+          languages: js
+          api-key: deprecated-api-key-value
           site: datadoghq.com
-          js-tracer-version: 5.1.0
-          python-tracer-version: 2.3.0
-          ruby-tracer-version: 1.5.0
-          dotnet-tracer-version: 3.2.0
 
-      - name: Assert DD_API_KEY is set
+      - name: Assert DD_API_KEY is set from deprecated api-key input
         run: |
           echo "actual DD_API_KEY: $DD_API_KEY"
-          if [ -z "$DD_API_KEY" ]; then
-            echo "FAIL: DD_API_KEY is not set"
+          if [ "$DD_API_KEY" != "deprecated-api-key-value" ]; then
+            echo "FAIL: expected 'deprecated-api-key-value', got '$DD_API_KEY'"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set"
+          echo "PASS: deprecated api-key input works correctly"
 
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+      - name: Assert provider is github
         run: |
           echo "actual: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            echo "FAIL: expected 'github'"
             exit 1
           fi
           echo "PASS"

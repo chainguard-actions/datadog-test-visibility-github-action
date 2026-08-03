@@ -1,4 +1,4 @@
-name: Test tracer version inputs (js, python, ruby, dotnet)
+name: Test java and go tracer version inputs and java-instrumented-build-system
 on:
   workflow_dispatch:
 jobs:
@@ -13,10 +13,8 @@ jobs:
           # Create a minimal fake install script that outputs tracer version env vars
           cat > /tmp/fake-install.sh << 'FAKESCRIPT'
           #!/bin/sh
-          echo "DD_TRACER_VERSION_JS=${DD_SET_TRACER_VERSION_JS:-5.0.0}"
-          echo "DD_TRACER_VERSION_PYTHON=${DD_SET_TRACER_VERSION_PYTHON:-2.0.0}"
-          echo "DD_TRACER_VERSION_RUBY=${DD_SET_TRACER_VERSION_RUBY:-1.0.0}"
-          echo "DD_TRACER_VERSION_DOTNET=${DD_SET_TRACER_VERSION_DOTNET:-3.0.0}"
+          echo "DD_TRACER_VERSION_JAVA=${DD_SET_TRACER_VERSION_JAVA:-1.30.0}"
+          echo "DD_TRACER_VERSION_GO=${DD_SET_TRACER_VERSION_GO:-0.50.0}"
           FAKESCRIPT
           chmod +x /tmp/fake-install.sh
 
@@ -64,13 +62,13 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js python ruby dotnet
+          languages: java go
           api_key: test-api-key-12345
           site: datadoghq.com
-          js-tracer-version: 5.1.0
-          python-tracer-version: 2.3.0
-          ruby-tracer-version: 1.5.0
-          dotnet-tracer-version: 3.2.0
+          java-tracer-version: 1.32.0
+          go-tracer-version: 0.52.0
+          java-instrumented-build-system: gradle
+          cache: 'false'
 
       - name: Assert DD_API_KEY is set
         run: |
