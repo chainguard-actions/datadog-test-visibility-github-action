@@ -1,4 +1,4 @@
-name: Test Go tracer inputs
+name: Test deprecated service-name input propagation to DD_SERVICE
 on:
   workflow_dispatch:
 jobs:
@@ -13,11 +13,19 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: go
+          languages: js
           api_key: fake-api-key-for-testing
           site: datadoghq.com
-          go-tracer-version: "v0.50.0"
-          go-module-dir: "."
+          service-name: my-deprecated-service
+
+      - name: Assert DD_SERVICE is set to my-deprecated-service
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-deprecated-service" ]; then
+            echo "FAIL: expected 'my-deprecated-service', got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS"
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -27,12 +35,3 @@ jobs:
             exit 1
           fi
           echo "PASS: DD_API_KEY is set"
-
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
-        run: |
-          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
-          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
-            exit 1
-          fi
-          echo "PASS"

@@ -1,4 +1,4 @@
-name: Test Go tracer inputs
+name: Test basic JS language instrumentation
 on:
   workflow_dispatch:
 jobs:
@@ -13,11 +13,9 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: go
+          languages: js
           api_key: fake-api-key-for-testing
           site: datadoghq.com
-          go-tracer-version: "v0.50.0"
-          go-module-dir: "."
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -33,6 +31,15 @@ jobs:
           echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
             echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SITE is set
+        run: |
+          echo "DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.com" ]; then
+            echo "FAIL: expected 'datadoghq.com', got '$DD_SITE'"
             exit 1
           fi
           echo "PASS"

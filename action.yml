@@ -96,8 +96,8 @@ runs:
       run: |
         echo "INSTALLATION_SCRIPT_URL=$INSTALLATION_SCRIPT_URL" >> $GITHUB_ENV
         echo "INSTALLATION_SCRIPT_CHECKSUM=$INSTALLATION_SCRIPT_CHECKSUM" >> $GITHUB_ENV
-        safe_check_run_id=$(printf '%s' "$JOB_CHECK_RUN_ID" | tr -d '\n\r')
-        echo "JOB_CHECK_RUN_ID=$safe_check_run_id" >> $GITHUB_ENV
+        safe_job_check_run_id=$(printf '%s' "$JOB_CHECK_RUN_ID_RAW" | tr -d '\n\r')
+        echo "JOB_CHECK_RUN_ID=$safe_job_check_run_id" >> $GITHUB_ENV
         safe_action_path=$(printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r')
         echo "$safe_action_path" >> $GITHUB_PATH
       shell: bash
@@ -105,7 +105,7 @@ runs:
         INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v15.sh
         INSTALLATION_SCRIPT_CHECKSUM: e64a4a45e0b171f4294b9f949f7fc99946192f952a2d463c61fad3cb8b956a58
         GITHUB_ACTION_PATH: ${{ github.action_path }}
-        JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+        JOB_CHECK_RUN_ID_RAW: ${{ job.check_run_id }}
     - name: Get Go cache directories
       if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
       id: go-cache-paths
@@ -170,11 +170,13 @@ runs:
         fi
 
         chmod +x $script_filepath
-        script_output=$(./$script_filepath)
-        while IFS= read -r line; do
+        script_output_file=$(mktemp)
+        ./$script_filepath >> "$script_output_file"
+        while IFS= read -r line || [ -n "$line" ]; do
           safe_line=$(printf '%s' "$line" | tr -d '\n\r')
           printf '%s\n' "$safe_line" >> "$GITHUB_ENV"
-        done <<< "$script_output"
+        done < "$script_output_file"
+        rm -f "$script_output_file"
       shell: bash
       env:
         DD_CIVISIBILITY_INSTRUMENTATION_LANGUAGES: ${{ inputs.languages }}
@@ -195,23 +197,23 @@ runs:
     - name: Propagate optional site input to environment variable
       if: "${{ inputs.site != '' }}"
       run: |
-        safe_site=$(printf '%s' "$DD_SITE_INPUT" | tr -d '\n\r')
-        echo "DD_SITE=$safe_site" >> "$GITHUB_ENV"
+        safe_dd_site=$(printf '%s' "$DD_SITE_INPUT" | tr -d '\n\r')
+        echo "DD_SITE=$safe_dd_site" >> "$GITHUB_ENV"
       shell: bash
       env:
         DD_SITE_INPUT: ${{ inputs.site }}
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
       run: |
-        safe_service=$(printf '%s' "$DD_SERVICE_INPUT" | tr -d '\n\r')
-        echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
+        safe_dd_service=$(printf '%s' "$DD_SERVICE_INPUT" | tr -d '\n\r')
+        echo "DD_SERVICE=$safe_dd_service" >> "$GITHUB_ENV"
       shell: bash
       env:
         DD_SERVICE_INPUT: ${{ inputs.service-name != '' && inputs.service-name || inputs.service }}
     - name: Propagate API key from input to environment variables and set provider
       run: |
-        safe_api_key=$(printf '%s' "$DD_API_KEY_INPUT" | tr -d '\n\r')
-        echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
+        safe_dd_api_key=$(printf '%s' "$DD_API_KEY_INPUT" | tr -d '\n\r')
+        echo "DD_API_KEY=$safe_dd_api_key" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
       env:

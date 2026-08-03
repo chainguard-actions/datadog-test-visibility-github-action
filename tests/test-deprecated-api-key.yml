@@ -1,4 +1,4 @@
-name: Test Go tracer inputs
+name: Test deprecated api-key input alias
 on:
   workflow_dispatch:
 jobs:
@@ -13,20 +13,17 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: go
-          api_key: fake-api-key-for-testing
-          site: datadoghq.com
-          go-tracer-version: "v0.50.0"
-          go-module-dir: "."
+          languages: js
+          api-key: deprecated-key-for-testing
 
-      - name: Assert DD_API_KEY is set
+      - name: Assert DD_API_KEY is set via deprecated api-key input
         run: |
           echo "DD_API_KEY: $DD_API_KEY"
           if [ -z "$DD_API_KEY" ]; then
-            echo "FAIL: DD_API_KEY is not set"
+            echo "FAIL: DD_API_KEY is not set when using deprecated api-key input"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set"
+          echo "PASS: DD_API_KEY is set via deprecated api-key alias"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
         run: |

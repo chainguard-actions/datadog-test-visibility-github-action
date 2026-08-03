@@ -4,21 +4,38 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: action
         uses: .
         with:
           languages: java
           api_key: fake-api-key-for-testing
-          java-tracer-version: "1.30.0"
+          site: datadoghq.com
+          java-tracer-version: "1.40.0"
           java-instrumented-build-system: gradle
-          java-tracer-repository-url: https://repo1.maven.org/maven2
-          java-tracer-repository-auth-header: "Authorization: Bearer fake-token"
+          java-tracer-repository-url: "https://repo1.maven.org/maven2"
+          java-tracer-repository-auth-header: "X-API-Key: test-key"
           java-tracer-auth-disable-redirects: "true"
-          print-github-step-summary: "false"
-        continue-on-error: true
-      - name: Assert action accepted Java inputs
+
+      - name: Assert DD_API_KEY is set
         run: |
-          echo "Action outcome: ${{ steps.action.outcome }}"
-          echo "PASS: action accepted Java-specific inputs"
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY is not set"
+            exit 1
+          fi
+          echo "PASS: DD_API_KEY is set"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"

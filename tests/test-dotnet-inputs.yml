@@ -1,4 +1,4 @@
-name: Test Go tracer inputs
+name: Test .NET tracer version input
 on:
   workflow_dispatch:
 jobs:
@@ -13,11 +13,10 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: go
+          languages: dotnet
           api_key: fake-api-key-for-testing
           site: datadoghq.com
-          go-tracer-version: "v0.50.0"
-          go-module-dir: "."
+          dotnet-tracer-version: "2.50.0"
 
       - name: Assert DD_API_KEY is set
         run: |
