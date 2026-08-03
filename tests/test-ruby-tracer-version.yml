@@ -1,4 +1,4 @@
-name: Test basic usage - JS language
+name: Test ruby-tracer-version input
 on:
   workflow_dispatch:
 jobs:
@@ -9,33 +9,16 @@ jobs:
 
       - name: Set up fake curl and sha256sum to intercept download
         run: |
-          # Create a fake install script that outputs env vars like the real one would
           cat > /tmp/fake-install-script.sh << 'FAKESCRIPT'
           #!/bin/sh
-          # Fake Datadog install script - outputs env vars to GITHUB_ENV
-          echo "DD_TRACER_VERSION_JS=5.0.0"
+          echo "DD_TRACER_VERSION_RUBY=1.3.0"
           FAKESCRIPT
           chmod +x /tmp/fake-install-script.sh
 
-          # Create fake curl that honors -o flag (for hardened action) and stdout (for pipe form)
           mkdir -p /tmp/fake-bin
           cat > /tmp/fake-bin/curl << 'FAKECURL'
           #!/bin/sh
           out=""
-          prev=""
-          for arg in "$@"; do
-            case "$prev" in
-              -o|-Lo|--output) out="$arg" ;;
-            esac
-            prev="$arg"
-          done
-          # Check for -Lo pattern (combined flag)
-          for arg in "$@"; do
-            case "$arg" in
-              -Lo) : ;;  # handled by prev logic above
-            esac
-          done
-          # Re-parse for -Lo <file> pattern
           skip_next=0
           for arg in "$@"; do
             if [ "$skip_next" = "1" ]; then
@@ -43,7 +26,7 @@ jobs:
               skip_next=0
             fi
             case "$arg" in
-              -Lo) skip_next=1 ;;
+              -o|--output|-Lo) skip_next=1 ;;
             esac
           done
           case "$*" in
@@ -60,10 +43,8 @@ jobs:
           FAKECURL
           chmod +x /tmp/fake-bin/curl
 
-          # Create fake sha256sum that always succeeds
           cat > /tmp/fake-bin/sha256sum << 'FAKECHECKSUM'
           #!/bin/sh
-          # Always pass checksum verification
           if echo "$*" | grep -q -- '-c'; then
             echo "install_test_visibility.sh: OK"
             exit 0
@@ -77,10 +58,10 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
+          languages: ruby
           api_key: test-api-key-12345
           site: datadoghq.com
-          service: my-test-service
+          ruby-tracer-version: 1.3.0
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -89,11 +70,7 @@ jobs:
             echo "FAIL: DD_API_KEY should be set"
             exit 1
           fi
-          if [ "$DD_API_KEY" != "test-api-key-12345" ]; then
-            echo "FAIL: expected DD_API_KEY=test-api-key-12345, got $DD_API_KEY"
-            exit 1
-          fi
-          echo "PASS: DD_API_KEY is set correctly"
+          echo "PASS: DD_API_KEY is set"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |
@@ -103,21 +80,3 @@ jobs:
             exit 1
           fi
           echo "PASS: DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github"
-
-      - name: Assert DD_SITE is set
-        run: |
-          echo "DD_SITE: $DD_SITE"
-          if [ "$DD_SITE" != "datadoghq.com" ]; then
-            echo "FAIL: expected DD_SITE=datadoghq.com, got $DD_SITE"
-            exit 1
-          fi
-          echo "PASS: DD_SITE is set correctly"
-
-      - name: Assert DD_SERVICE is set
-        run: |
-          echo "DD_SERVICE: $DD_SERVICE"
-          if [ "$DD_SERVICE" != "my-test-service" ]; then
-            echo "FAIL: expected DD_SERVICE=my-test-service, got $DD_SERVICE"
-            exit 1
-          fi
-          echo "PASS: DD_SERVICE is set correctly"

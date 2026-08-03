@@ -1,0 +1,24 @@
+name: Test service input sets DD_SERVICE
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: js
+          api_key: fake-api-key-for-testing
+          service: my-test-service
+
+      - name: Assert DD_SERVICE is set correctly
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-test-service" ]; then
+            echo "FAIL: expected 'my-test-service', got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS"

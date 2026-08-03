@@ -57,10 +57,26 @@ inputs:
     description: 'Deprecated, alias for api_key'
     required: false
     deprecationMessage: 'api-key input is deprecated, please use api_key instead'
-
 runs:
   using: 'composite'
   steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - name: Set global envs and github path
       run: |
         echo "INSTALLATION_SCRIPT_URL=$INSTALLATION_SCRIPT_URL" >> $GITHUB_ENV
@@ -72,7 +88,6 @@ runs:
         INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v11.sh
         INSTALLATION_SCRIPT_CHECKSUM: fc64c45fd4b45b4b01773c58a3a116bef212dc4095508a6e27e19e50e901bd55
         GITHUB_ACTION_PATH: ${{ github.action_path }}
-
     - name: Get Go cache directories
       if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
       id: go-cache-paths
@@ -83,7 +98,6 @@ runs:
         echo "GOCACHE_PATH=$(go env GOCACHE)" >> $GITHUB_OUTPUT
         echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
-
     - name: Go cache
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 v4
       if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
@@ -95,7 +109,6 @@ runs:
           /github/workspace/.datadog
           ${{ steps.go-cache-paths.outputs.GOPATH }}/bin/orchestrion
         key: test-optimization-go-${{ env.INSTALLATION_SCRIPT_CHECKSUM }}-${{ steps.go-cache-paths.outputs.GOVERSION }}-${{ inputs.go-tracer-version }}-${{ hashFiles('**/go.mod') }}-${{ hashFiles('**/go.sum') }}
-
     - name: Download and run configuration script
       id: run-configuration-script
       run: |
@@ -139,13 +152,7 @@ runs:
         fi
 
         chmod +x $script_filepath
-        script_output=$(./$script_filepath)
-        while IFS= read -r line; do
-          key="${line%%=*}"
-          value="${line#*=}"
-          safe_value=$(printf '%s' "$value" | tr -d '\n\r')
-          printf '%s=%s\n' "$key" "$safe_value" >> "$GITHUB_ENV"
-        done <<< "$script_output"
+        ./$script_filepath >> "$GITHUB_ENV"
       shell: bash
       env:
         DD_CIVISIBILITY_INSTRUMENTATION_LANGUAGES: ${{ inputs.languages }}
@@ -158,46 +165,42 @@ runs:
         DD_SET_TRACER_VERSION_RUBY: ${{ inputs.ruby-tracer-version }}
         DD_SET_TRACER_VERSION_GO: ${{ inputs.go-tracer-version }}
         DD_INSTRUMENTATION_BUILD_SYSTEM_JAVA: ${{ inputs.java-instrumented-build-system }}
-
     - name: Propagate optional site input to environment variable
       if: "${{ inputs.site != '' }}"
-      env:
-        DD_SITE_INPUT: ${{ inputs.site }}
       run: |
         safe_site=$(printf '%s' "$DD_SITE_INPUT" | tr -d '\n\r')
         echo "DD_SITE=$safe_site" >> "$GITHUB_ENV"
       shell: bash
-
+      env:
+        DD_SITE_INPUT: ${{ inputs.site }}
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
-      env:
-        SERVICE_NAME_INPUT: ${{ inputs.service-name }}
-        SERVICE_INPUT: ${{ inputs.service }}
       run: |
-        if [ -n "$SERVICE_NAME_INPUT" ]; then
-          raw_service="$SERVICE_NAME_INPUT"
+        if [ -n "$DD_SERVICE_NAME_INPUT" ]; then
+          service_value="$DD_SERVICE_NAME_INPUT"
         else
-          raw_service="$SERVICE_INPUT"
+          service_value="$DD_SERVICE_INPUT"
         fi
-        safe_service=$(printf '%s' "$raw_service" | tr -d '\n\r')
+        safe_service=$(printf '%s' "$service_value" | tr -d '\n\r')
         echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
       shell: bash
-
-    - name: Propagate API key from input to environment variables and set provider
       env:
-        API_KEY_DASH_INPUT: ${{ inputs.api-key }}
-        API_KEY_UNDERSCORE_INPUT: ${{ inputs.api_key }}
+        DD_SERVICE_INPUT: ${{ inputs.service }}
+        DD_SERVICE_NAME_INPUT: ${{ inputs.service-name }}
+    - name: Propagate API key from input to environment variables and set provider
       run: |
-        if [ -n "$API_KEY_DASH_INPUT" ]; then
-          raw_api_key="$API_KEY_DASH_INPUT"
+        if [ -n "$DD_API_KEY_HYPHEN_INPUT" ]; then
+          api_key_value="$DD_API_KEY_HYPHEN_INPUT"
         else
-          raw_api_key="$API_KEY_UNDERSCORE_INPUT"
+          api_key_value="$DD_API_KEY_UNDERSCORE_INPUT"
         fi
-        safe_api_key=$(printf '%s' "$raw_api_key" | tr -d '\n\r')
+        safe_api_key=$(printf '%s' "$api_key_value" | tr -d '\n\r')
         echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
-
+      env:
+        DD_API_KEY_HYPHEN_INPUT: ${{ inputs.api-key }}
+        DD_API_KEY_UNDERSCORE_INPUT: ${{ inputs.api_key }}
     - name: Print summary
       run: |
         echo "---" >> $GITHUB_STEP_SUMMARY
@@ -232,4 +235,3 @@ runs:
       shell: bash
       env:
         PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
-

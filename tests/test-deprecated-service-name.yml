@@ -1,0 +1,85 @@
+name: Test deprecated service-name input alias
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl and sha256sum to intercept download
+        run: |
+          # Create a fake install script
+          cat > /tmp/fake-install-script.sh << 'FAKESCRIPT'
+          #!/bin/sh
+          echo "DD_TRACER_VERSION_PYTHON=2.0.0"
+          FAKESCRIPT
+          chmod +x /tmp/fake-install-script.sh
+
+          mkdir -p /tmp/fake-bin
+
+          # Fake curl that honors -o flag
+          cat > /tmp/fake-bin/curl << 'FAKECURL'
+          #!/bin/sh
+          out=""
+          skip_next=0
+          for arg in "$@"; do
+            if [ "$skip_next" = "1" ]; then
+              out="$arg"
+              skip_next=0
+            fi
+            case "$arg" in
+              -Lo|-o|--output) skip_next=1 ;;
+            esac
+          done
+          case "$*" in
+            *datadoghq.com/scripts/install_test_visibility*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install-script.sh > "$out"
+              else
+                cat /tmp/fake-install-script.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          FAKECURL
+          chmod +x /tmp/fake-bin/curl
+
+          # Fake sha256sum that always passes
+          cat > /tmp/fake-bin/sha256sum << 'FAKECHECKSUM'
+          #!/bin/sh
+          if echo "$*" | grep -q -- '-c'; then
+            echo "install_test_visibility.sh: OK"
+            exit 0
+          fi
+          exec /usr/bin/sha256sum "$@"
+          FAKECHECKSUM
+          chmod +x /tmp/fake-bin/sha256sum
+
+          echo "/tmp/fake-bin" >> $GITHUB_PATH
+
+      - id: action
+        uses: .
+        with:
+          languages: python
+          api_key: test-api-key-67890
+          service-name: my-deprecated-service
+
+      - name: Assert DD_SERVICE is set from deprecated service-name input
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-deprecated-service" ]; then
+            echo "FAIL: expected DD_SERVICE=my-deprecated-service, got $DD_SERVICE"
+            exit 1
+          fi
+          echo "PASS: DD_SERVICE is set correctly from deprecated service-name input"
+
+      - name: Assert DD_API_KEY is set
+        run: |
+          echo "DD_API_KEY: $DD_API_KEY"
+          if [ "$DD_API_KEY" != "test-api-key-67890" ]; then
+            echo "FAIL: expected DD_API_KEY=test-api-key-67890, got $DD_API_KEY"
+            exit 1
+          fi
+          echo "PASS: DD_API_KEY is set correctly"
