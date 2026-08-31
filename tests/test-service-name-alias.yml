@@ -1,0 +1,43 @@
+name: Test deprecated service-name input and custom site
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          languages: js
+          api_key: test-api-key-12345
+          site: datadoghq.eu
+          service-name: my-legacy-service
+
+      - name: Assert DD_SERVICE is set via deprecated service-name input
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-legacy-service" ]; then
+            echo "FAIL: expected DD_SERVICE=my-legacy-service, got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SITE is set to custom EU site
+        run: |
+          echo "DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.eu" ]; then
+            echo "FAIL: expected DD_SITE=datadoghq.eu, got '$DD_SITE'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github"
+            exit 1
+          fi
+          echo "PASS"
