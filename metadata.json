@@ -1,7 +1,0 @@
-{
-  "owner": "datadog",
-  "name": "test-visibility-github-action",
-  "visibility": "public",
-  "description": "Installs Datadog tracers for configured languages and enables Test Visibility",
-  "block_publish": false
-}
