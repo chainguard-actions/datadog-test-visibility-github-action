@@ -10,19 +10,18 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
-          api_key: fake-api-key-for-testing
+          languages: python
+          api_key: test-api-key-12345678901234567890123456789012
           service: my-test-service
-        continue-on-error: true
 
       - name: Assert DD_SERVICE is set correctly
         run: |
           echo "DD_SERVICE: $DD_SERVICE"
           if [ "$DD_SERVICE" != "my-test-service" ]; then
-            echo "FAIL: expected DD_SERVICE=my-test-service, got '$DD_SERVICE'"
+            echo "FAIL: expected 'my-test-service', got '$DD_SERVICE'"
             exit 1
           fi
-          echo "PASS: DD_SERVICE=my-test-service"
+          echo "PASS: DD_SERVICE is set correctly"
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -33,11 +32,11 @@ jobs:
           fi
           echo "PASS: DD_API_KEY is set"
 
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
         run: |
           echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
             exit 1
           fi
-          echo "PASS: DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github"
+          echo "PASS"

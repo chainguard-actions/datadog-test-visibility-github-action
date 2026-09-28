@@ -1,4 +1,4 @@
-name: Test custom Datadog site propagation
+name: Test custom site input
 on:
   workflow_dispatch:
 jobs:
@@ -10,18 +10,18 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
-          api_key: fake-api-key-for-testing
+          languages: java
+          api_key: test-api-key-12345678901234567890123456789012
           site: datadoghq.eu
 
-      - name: Assert DD_SITE is set to the custom EU site
+      - name: Assert DD_SITE is set to custom EU site
         run: |
           echo "DD_SITE: $DD_SITE"
           if [ "$DD_SITE" != "datadoghq.eu" ]; then
             echo "FAIL: expected 'datadoghq.eu', got '$DD_SITE'"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: DD_SITE is set to datadoghq.eu"
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -30,7 +30,7 @@ jobs:
             echo "FAIL: DD_API_KEY is not set"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: DD_API_KEY is set"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
         run: |

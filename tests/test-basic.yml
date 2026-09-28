@@ -11,9 +11,8 @@ jobs:
         uses: .
         with:
           languages: js
-          api_key: fake-api-key-for-testing
+          api_key: test-api-key-12345678901234567890123456789012
           site: datadoghq.com
-        continue-on-error: true
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -24,20 +23,20 @@ jobs:
           fi
           echo "PASS: DD_API_KEY is set"
 
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
+
       - name: Assert DD_SITE is set
         run: |
           echo "DD_SITE: $DD_SITE"
           if [ "$DD_SITE" != "datadoghq.com" ]; then
-            echo "FAIL: expected DD_SITE=datadoghq.com, got '$DD_SITE'"
+            echo "FAIL: expected 'datadoghq.com', got '$DD_SITE'"
             exit 1
           fi
-          echo "PASS: DD_SITE is set correctly"
-
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
-        run: |
-          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
-          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
-            exit 1
-          fi
-          echo "PASS: DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github"
+          echo "PASS"
