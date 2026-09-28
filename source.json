@@ -1,0 +1,12 @@
+{
+  "owner": "datadog",
+  "repo": "test-visibility-github-action",
+  "version": "v2.8.0",
+  "commit_sha": "ef8406bf5f987037fcbe3bf8ecf023f5dd1f9e36",
+  "url": "https://github.com/datadog/test-visibility-github-action",
+  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "1",
+  "harden_agent_version": "2",
+  "dependency_fingerprint": "sha256:04fcf71a9954921e7c46444683248195213fdb0543773b0a2a53e62914e71428"
+}
