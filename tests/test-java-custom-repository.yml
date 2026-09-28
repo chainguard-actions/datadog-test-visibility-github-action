@@ -1,4 +1,4 @@
-name: Test go-module-dir input
+name: Test java custom repository inputs
 on:
   workflow_dispatch:
 jobs:
@@ -10,17 +10,19 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: go
+          languages: java
           api_key: fake-api-key-for-input-coverage
-          go-module-dir: ./mymodule
+          java-tracer-repository-url: https://repo.example.com/maven
+          java-tracer-repository-auth-header: 'Authorization: Bearer test-token'
+          java-tracer-auth-disable-redirects: 'true'
           cache: 'false'
-      - name: Assert action ran (input coverage for go-module-dir)
+      - name: Assert action ran (input coverage for java custom repository inputs)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with go-module-dir input"
+            echo "PASS: action ran with java-tracer-repository-url, java-tracer-repository-auth-header, and java-tracer-auth-disable-redirects inputs"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

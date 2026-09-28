@@ -1,4 +1,4 @@
-name: Test go-module-dir input
+name: Test java-instrumented-build-system input
 on:
   workflow_dispatch:
 jobs:
@@ -10,17 +10,17 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: go
+          languages: java
           api_key: fake-api-key-for-input-coverage
-          go-module-dir: ./mymodule
+          java-instrumented-build-system: gradle
           cache: 'false'
-      - name: Assert action ran (input coverage for go-module-dir)
+      - name: Assert action ran (input coverage for java-instrumented-build-system)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with go-module-dir input"
+            echo "PASS: action ran with java-instrumented-build-system input"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

@@ -103,8 +103,8 @@ runs:
       run: |
         echo "INSTALLATION_SCRIPT_URL=$INSTALLATION_SCRIPT_URL" >> $GITHUB_ENV
         echo "INSTALLATION_SCRIPT_CHECKSUM=$INSTALLATION_SCRIPT_CHECKSUM" >> $GITHUB_ENV
-        safe_job_check_run_id=$(printf '%s' "$JOB_CHECK_RUN_ID" | tr -d '\n\r')
-        echo "JOB_CHECK_RUN_ID=$safe_job_check_run_id" >> $GITHUB_ENV
+        safe_check_run_id=$(printf '%s' "$JOB_CHECK_RUN_ID" | tr -d '\n\r')
+        echo "JOB_CHECK_RUN_ID=$safe_check_run_id" >> $GITHUB_ENV
         safe_action_path=$(printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r')
         echo "$safe_action_path" >> $GITHUB_PATH
       shell: bash
@@ -198,37 +198,27 @@ runs:
     - name: Propagate optional site input to environment variable
       if: "${{ inputs.site != '' }}"
       run: |
-        safe=$(printf '%s' "$INPUT_SITE" | tr -d '\n\r')
-        echo "DD_SITE=$safe" >> "$GITHUB_ENV"
+        safe_site=$(printf '%s' "$INPUT_SITE" | tr -d '\n\r')
+        echo "DD_SITE=$safe_site" >> "$GITHUB_ENV"
       shell: bash
       env:
         INPUT_SITE: ${{ inputs.site }}
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
       run: |
-        if [ -n "$INPUT_SERVICE_NAME" ]; then
-          safe=$(printf '%s' "$INPUT_SERVICE_NAME" | tr -d '\n\r')
-        else
-          safe=$(printf '%s' "$INPUT_SERVICE" | tr -d '\n\r')
-        fi
-        echo "DD_SERVICE=$safe" >> "$GITHUB_ENV"
+        safe_service=$(printf '%s' "$INPUT_SERVICE" | tr -d '\n\r')
+        echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_SERVICE: ${{ inputs.service }}
-        INPUT_SERVICE_NAME: ${{ inputs.service-name }}
+        INPUT_SERVICE: ${{ inputs.service-name != '' && inputs.service-name || inputs.service }}
     - name: Propagate API key from input to environment variables and set provider
       run: |
-        if [ -n "$INPUT_API_KEY_HYPHEN" ]; then
-          safe=$(printf '%s' "$INPUT_API_KEY_HYPHEN" | tr -d '\n\r')
-        else
-          safe=$(printf '%s' "$INPUT_API_KEY_UNDERSCORE" | tr -d '\n\r')
-        fi
-        echo "DD_API_KEY=$safe" >> "$GITHUB_ENV"
+        safe_api_key=$(printf '%s' "$INPUT_API_KEY" | tr -d '\n\r')
+        echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_API_KEY_HYPHEN: ${{ inputs.api-key }}
-        INPUT_API_KEY_UNDERSCORE: ${{ inputs.api_key }}
+        INPUT_API_KEY: ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}
     - name: Print summary
       run: |
         echo "---" >> $GITHUB_STEP_SUMMARY
@@ -256,10 +246,10 @@ runs:
         fi
         echo "---" >> $GITHUB_STEP_SUMMARY
 
-        if [ "$PRINT_GITHUB_STEP_SUMMARY" == "false" ]; then
+        if [ "$INPUT_PRINT_GITHUB_STEP_SUMMARY" == "false" ]; then
           cat $GITHUB_STEP_SUMMARY
           rm -f $GITHUB_STEP_SUMMARY
         fi
       shell: bash
       env:
-        PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
+        INPUT_PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
