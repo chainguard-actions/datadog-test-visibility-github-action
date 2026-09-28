@@ -1,4 +1,4 @@
-name: Test deprecated api-key input alias
+name: Test tracer version inputs (js, python, ruby)
 on:
   workflow_dispatch:
 jobs:
@@ -12,8 +12,8 @@ jobs:
           FAKE_BIN="$GITHUB_WORKSPACE/.fake-bin"
           mkdir -p "$FAKE_BIN"
 
-          # Write the fake install script
-          printf '#!/bin/sh\necho "DD_TRACER_VERSION_JS=5.0.0"\necho "DD_CIVISIBILITY_ENABLED=true"\n' > /tmp/fake-install-datadog.sh
+          # Write the fake install script that outputs env vars
+          printf '#!/bin/sh\necho "DD_TRACER_VERSION_JS=4.1.0"\necho "DD_TRACER_VERSION_PYTHON=2.1.0"\necho "DD_TRACER_VERSION_RUBY=1.5.0"\necho "DD_CIVISIBILITY_ENABLED=true"\n' > /tmp/fake-install-datadog.sh
           chmod +x /tmp/fake-install-datadog.sh
 
           # Fake curl: serves the fake install script, honoring -o flag
@@ -29,17 +29,21 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
-          api-key: fake-api-key-deprecated-alias
+          languages: js python ruby
+          api_key: fake-api-key-for-testing
+          js-tracer-version: 4.1.0
+          python-tracer-version: 2.1.0
+          python-coverage-version: 7.3.0
+          ruby-tracer-version: 1.5.0
 
-      - name: Assert DD_API_KEY is set via deprecated api-key alias
+      - name: Assert DD_API_KEY is set
         run: |
           echo "DD_API_KEY is set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
           if [ -z "$DD_API_KEY" ]; then
-            echo "FAIL: DD_API_KEY is not set when using deprecated api-key input"
+            echo "FAIL: DD_API_KEY is not set"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set via deprecated api-key alias"
+          echo "PASS: DD_API_KEY is set"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is github
         run: |

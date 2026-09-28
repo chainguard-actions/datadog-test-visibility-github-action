@@ -1,4 +1,4 @@
-name: Test deprecated api-key input alias
+name: Test service and site inputs
 on:
   workflow_dispatch:
 jobs:
@@ -13,7 +13,7 @@ jobs:
           mkdir -p "$FAKE_BIN"
 
           # Write the fake install script
-          printf '#!/bin/sh\necho "DD_TRACER_VERSION_JS=5.0.0"\necho "DD_CIVISIBILITY_ENABLED=true"\n' > /tmp/fake-install-datadog.sh
+          printf '#!/bin/sh\necho "DD_TRACER_VERSION_PYTHON=2.0.0"\necho "DD_CIVISIBILITY_ENABLED=true"\n' > /tmp/fake-install-datadog.sh
           chmod +x /tmp/fake-install-datadog.sh
 
           # Fake curl: serves the fake install script, honoring -o flag
@@ -29,17 +29,37 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
-          api-key: fake-api-key-deprecated-alias
+          languages: python
+          api_key: fake-api-key-for-testing
+          site: datadoghq.eu
+          service: my-test-service
 
-      - name: Assert DD_API_KEY is set via deprecated api-key alias
+      - name: Assert DD_SITE is set to custom site
+        run: |
+          echo "DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.eu" ]; then
+            echo "FAIL: expected 'datadoghq.eu', got '$DD_SITE'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SERVICE is set
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-test-service" ]; then
+            echo "FAIL: expected 'my-test-service', got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_API_KEY is set
         run: |
           echo "DD_API_KEY is set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
           if [ -z "$DD_API_KEY" ]; then
-            echo "FAIL: DD_API_KEY is not set when using deprecated api-key input"
+            echo "FAIL: DD_API_KEY is not set"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set via deprecated api-key alias"
+          echo "PASS"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is github
         run: |

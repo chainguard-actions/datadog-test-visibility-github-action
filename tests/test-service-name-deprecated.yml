@@ -1,4 +1,4 @@
-name: Test deprecated api-key input alias
+name: Test deprecated service-name input
 on:
   workflow_dispatch:
 jobs:
@@ -30,16 +30,26 @@ jobs:
         uses: .
         with:
           languages: js
-          api-key: fake-api-key-deprecated-alias
+          api_key: fake-api-key-for-testing
+          service-name: my-deprecated-service
 
-      - name: Assert DD_API_KEY is set via deprecated api-key alias
+      - name: Assert DD_SERVICE is set via deprecated service-name input
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-deprecated-service" ]; then
+            echo "FAIL: expected 'my-deprecated-service', got '$DD_SERVICE'"
+            exit 1
+          fi
+          echo "PASS: DD_SERVICE correctly set from deprecated service-name input"
+
+      - name: Assert DD_API_KEY is set
         run: |
           echo "DD_API_KEY is set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
           if [ -z "$DD_API_KEY" ]; then
-            echo "FAIL: DD_API_KEY is not set when using deprecated api-key input"
+            echo "FAIL: DD_API_KEY is not set"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set via deprecated api-key alias"
+          echo "PASS: DD_API_KEY is set"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is github
         run: |
