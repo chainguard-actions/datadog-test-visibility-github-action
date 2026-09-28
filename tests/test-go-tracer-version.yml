@@ -12,8 +12,9 @@ jobs:
         with:
           languages: go
           api_key: fake-api-key-for-testing
-          go-tracer-version: "v0.22.4"
+          go-tracer-version: "v0.13.0"
           cache: "false"
+          print-github-step-summary: "false"
       - name: Assert action ran with go-tracer-version input
         env:
           OUTCOME: ${{ steps.action.outcome }}

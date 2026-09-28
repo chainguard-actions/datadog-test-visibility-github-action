@@ -12,8 +12,9 @@ jobs:
         with:
           languages: java
           api_key: fake-api-key-for-testing
-          java-tracer-version: "1.36.0"
+          java-tracer-version: "1.40.0"
           java-instrumented-build-system: gradle
+          print-github-step-summary: "false"
       - name: Assert action ran with java-tracer-version and java-instrumented-build-system inputs
         env:
           OUTCOME: ${{ steps.action.outcome }}

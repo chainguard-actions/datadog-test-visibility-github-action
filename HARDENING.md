@@ -10,57 +10,49 @@
 
 **Harden Agent Version:** `2`
 
-Action **DataDog--test-visibility-github-action/v2.4.1** was hardened automatically. 7 finding(s) were identified and resolved across 1 iteration(s).
+Action **DataDog--test-visibility-github-action/v2.4.1** was hardened automatically. 7 finding(s) were identified and resolved across 2 iteration(s).
 
 ## Findings Fixed
 
-### script-injection (severity: high)
+### unpinned-uses (severity: high)
 
-Multiple run: blocks in action.yml directly interpolate ${{ inputs.* }} expressions inside shell command strings (sub-rule a), allowing an attacker who controls those inputs to inject arbitrary shell commands.
-
-Offending lines:
-- Line 148: `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"`
-- Line 153: `echo "DD_SERVICE=${{ inputs.service-name != '' && inputs.service-name || inputs.service }}" >> "$GITHUB_ENV"`
-- Line 159: `echo "DD_API_KEY=${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}" >> "$GITHUB_ENV"`
-- Line 185: `if [ "${{ inputs.print-github-step-summary }}" == "false" ]`
-
-All four cases embed a ${{ }} template expression directly inside a run: shell string. The values are YAML-substituted before the shell ever sees them, so a newline or shell metacharacter in an input value can break out of the intended command context. Each should be moved to an env: variable and the shell expansion double-quoted.
+The composite action uses `actions/cache@v4`, which is pinned to a mutable version tag rather than an immutable 40-character commit SHA. A tag can be moved to point to a different (potentially malicious) commit, enabling a supply-chain attack.
 
 Locations:
 
-- `action.yml:148`
+- `action.yml:88`
+
+### script-injection (severity: high)
+
+Multiple `run:` blocks directly interpolate `${{ inputs.* }}` expressions inside shell command strings (rule a). The Actions template engine substitutes these values before the shell parses the command, so an attacker-controlled input containing shell metacharacters (`;`, `|`, `$(...)`, etc.) can execute arbitrary commands.
+
+- Line 147: `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"` — inputs.site interpolated directly.
+- Line 153: `echo "DD_SERVICE=${{ inputs.service-name != '' && inputs.service-name || inputs.service }}" >> "$GITHUB_ENV"` — inputs.service/service-name interpolated directly.
+- Line 159: `echo "DD_API_KEY=${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}" >> "$GITHUB_ENV"` — inputs.api-key/api_key interpolated directly.
+- Line 185: `if [ "${{ inputs.print-github-step-summary }}" == "false" ]` — inputs.print-github-step-summary interpolated directly inside a shell conditional.
+
+Locations:
+
+- `action.yml:147`
 - `action.yml:153`
 - `action.yml:159`
 - `action.yml:185`
 
 ### github-env-injection (severity: high)
 
-Four run: steps write untrusted input values to $GITHUB_ENV or $GITHUB_PATH without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`).
+Several `run:` blocks write attacker-controlled values to `$GITHUB_ENV` without the required newline-stripping sanitization (`printf '%s' ... | tr -d '\n\r'`). A value containing a newline can inject arbitrary environment variable assignments for subsequent steps.
 
-1. Line 63 — `echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH`: The env var GITHUB_ACTION_PATH is set from `${{ github.action_path }}` (a workflow-controlled value) and written unsanitized to $GITHUB_PATH. A newline in the value would allow injecting an arbitrary extra PATH entry.
-
-2. Line 148 — `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"`: The raw inputs.site value is written directly to $GITHUB_ENV without sanitization.
-
-3. Line 153 — `echo "DD_SERVICE=${{ ... inputs.service }}" >> "$GITHUB_ENV"`: The raw inputs.service / inputs.service-name value is written directly to $GITHUB_ENV without sanitization.
-
-4. Line 159 — `echo "DD_API_KEY=${{ inputs.api-key ... || inputs.api_key }}" >> "$GITHUB_ENV"`: The raw API key input is written directly to $GITHUB_ENV without sanitization.
-
-In all cases the fix is to capture the value into a shell variable, pipe it through `printf '%s' "$VAR" | tr -d '\n\r'`, and only then write the sanitized result to the special environment file.
+- Line 147 ("Propagate optional site" step): `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"` — inputs.site written directly to GITHUB_ENV.
+- Line 153 ("Propagate optional service" step): `echo "DD_SERVICE=${{ inputs.service-name ... || inputs.service }}" >> "$GITHUB_ENV"` — inputs.service/service-name written directly to GITHUB_ENV.
+- Line 159 ("Propagate API key" step): `echo "DD_API_KEY=${{ inputs.api-key ... || inputs.api_key }}" >> "$GITHUB_ENV"` — inputs.api_key written directly to GITHUB_ENV.
+- Line 138 ("Download and run configuration script" step): `./$script_filepath >> "$GITHUB_ENV"` — the full stdout of the downloaded installation script (which runs with env vars sourced from caller-controlled inputs) is appended unsanitized to GITHUB_ENV.
 
 Locations:
 
-- `action.yml:63`
-- `action.yml:148`
+- `action.yml:138`
+- `action.yml:147`
 - `action.yml:153`
 - `action.yml:159`
-
-### unpinned-uses (severity: high)
-
-The composite action uses `actions/cache@v4` (a mutable version tag) instead of a pinned 40-character commit SHA. A mutable tag can be silently moved to a different, potentially malicious commit, enabling a supply-chain attack. Replace with the full SHA, e.g. `actions/cache@1bd1e32a3bdc45362d1e726936510720a7c6158d # v4`.
-
-Locations:
-
-- `action.yml:90`
 
 ### static-inline-injection (severity: high)
 
@@ -98,15 +90,24 @@ Locations:
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, github-env-injection, unpinned-uses, static-inline-injection
+**Fixes applied:** unpinned-uses, script-injection, github-env-injection, static-inline-injection
 
 **Notes:**
 
-Fixed all 7 findings in hardened/action/action.yml:
-1. github-env-injection (line 63): Sanitized GITHUB_ACTION_PATH with `printf '%s' | tr -d '\n\r'` before writing to $GITHUB_PATH.
-2. unpinned-uses (line 90): Pinned actions/cache@v4 to full SHA `0057852bfaa89a56745cba8c7296529d2fc39830`.
-3. script-injection + github-env-injection (lines 148/158): Moved inputs.site to env block as INPUT_SITE, sanitized before writing to GITHUB_ENV.
-4. script-injection + github-env-injection (lines 153/164): Moved service expression to env block as INPUT_SERVICE, sanitized before writing to GITHUB_ENV.
-5. script-injection + github-env-injection (lines 159/169): Moved API key expression to env block as INPUT_API_KEY, sanitized before writing to GITHUB_ENV.
-6. script-injection (lines 185/200): Moved inputs.print-github-step-summary to env block as INPUT_PRINT_GITHUB_STEP_SUMMARY, referenced as shell variable.
+Fixed all findings in hardened/action/action.yml:
+1. unpinned-uses (line 88): Pinned `actions/cache@v4` to full commit SHA `actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4`.
+2. script-injection + static-inline-injection (lines 147, 153, 159, 185/200): Moved all four `${{ inputs.* }}` expressions out of run: shell strings into step-level env: blocks, referencing them as plain environment variables ($INPUT_SITE, $INPUT_SERVICE_NAME, $INPUT_SERVICE, $INPUT_API_KEY_HYPHEN, $INPUT_API_KEY, $INPUT_PRINT_GITHUB_STEP_SUMMARY).
+3. github-env-injection (lines 147, 153, 159): Added `printf '%s' "$VAR" | tr -d '\n\r'` sanitization before writing inputs.site, inputs.service/service-name, and inputs.api-key/api_key to $GITHUB_ENV. The script stdout pipe to GITHUB_ENV (line 138) was left as-is since it is the intended behavior of the installation script and the script is checksum-verified before execution.
+
+### Iteration 2
+
+**Fixes applied:** github-env-injection, github-env-injection
+
+**Notes:**
+
+Fixed two github-env-injection findings in action.yml:
+
+1. Step 'Set global envs and github path' (line 67): Added sanitization of GITHUB_ACTION_PATH before writing to $GITHUB_PATH. Now uses `safe_action_path=$(printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r')` and writes the sanitized value.
+
+2. Step 'Download and run configuration script' (line 130): Instead of piping script output directly to $GITHUB_ENV, the output is now captured to a temp file via `mktemp`, then each line is sanitized with `printf '%s' "$line" | tr -d '\n\r'` before being appended to $GITHUB_ENV. The temp file is cleaned up afterward.
 

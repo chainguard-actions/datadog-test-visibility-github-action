@@ -12,7 +12,8 @@ jobs:
         with:
           languages: ruby
           api_key: fake-api-key-for-testing
-          ruby-tracer-version: "1.3.0"
+          ruby-tracer-version: "1.10.0"
+          print-github-step-summary: "false"
       - name: Assert action ran with ruby-tracer-version input
         env:
           OUTCOME: ${{ steps.action.outcome }}
