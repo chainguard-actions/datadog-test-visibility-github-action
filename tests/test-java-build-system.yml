@@ -1,4 +1,4 @@
-name: Test go-module-dir input
+name: Test java-instrumented-build-system input
 on:
   workflow_dispatch:
 jobs:
@@ -10,10 +10,10 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: go
+          languages: java
           api_key: test-api-key-12345
           site: datadoghq.com
-          go-module-dir: ./mymodule
+          java-instrumented-build-system: gradle
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |

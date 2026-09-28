@@ -1,4 +1,4 @@
-name: Test go-module-dir input
+name: Test java-tracer-repository-url and auth inputs
 on:
   workflow_dispatch:
 jobs:
@@ -10,10 +10,12 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: go
+          languages: java
           api_key: test-api-key-12345
           site: datadoghq.com
-          go-module-dir: ./mymodule
+          java-tracer-repository-url: https://repo1.maven.org/maven2
+          java-tracer-repository-auth-header: "X-API-Key: test-token"
+          java-tracer-auth-disable-redirects: "true"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |
