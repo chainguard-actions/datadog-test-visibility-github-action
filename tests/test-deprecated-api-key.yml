@@ -1,4 +1,4 @@
-name: Test basic usage - JS language
+name: Test deprecated api-key input alias
 on:
   workflow_dispatch:
 jobs:
@@ -15,22 +15,20 @@ jobs:
         with:
           languages: js
           api_key: fake-api-key-for-testing
+          api-key: deprecated-api-key-value
         continue-on-error: true
 
-      - name: Assert DD_API_KEY is set
+      - name: Assert DD_API_KEY is set (deprecated api-key input takes precedence)
         run: |
           echo "DD_API_KEY: $DD_API_KEY"
           if [ -z "$DD_API_KEY" ]; then
             echo "FAIL: DD_API_KEY should be set"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set"
-
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
-        run: |
-          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
-          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+          # The action uses: inputs.api-key != '' && inputs.api-key || inputs.api_key
+          # So when api-key is provided, it should be used
+          if [ "$DD_API_KEY" != "deprecated-api-key-value" ]; then
+            echo "FAIL: expected 'deprecated-api-key-value', got '$DD_API_KEY'"
             exit 1
           fi
           echo "PASS"

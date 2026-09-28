@@ -1,4 +1,4 @@
-name: Test basic usage - JS language
+name: Test basic JS language setup
 on:
   workflow_dispatch:
 jobs:
@@ -15,22 +15,30 @@ jobs:
         with:
           languages: js
           api_key: fake-api-key-for-testing
-        continue-on-error: true
 
       - name: Assert DD_API_KEY is set
         run: |
-          echo "DD_API_KEY: $DD_API_KEY"
+          echo "actual DD_API_KEY: $DD_API_KEY"
           if [ -z "$DD_API_KEY" ]; then
-            echo "FAIL: DD_API_KEY should be set"
+            echo "FAIL: DD_API_KEY is not set"
             exit 1
           fi
           echo "PASS: DD_API_KEY is set"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
         run: |
-          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          echo "actual: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
             echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SITE defaults to datadoghq.com
+        run: |
+          echo "actual DD_SITE: $DD_SITE"
+          if [ "$DD_SITE" != "datadoghq.com" ]; then
+            echo "FAIL: expected 'datadoghq.com', got '$DD_SITE'"
             exit 1
           fi
           echo "PASS"
