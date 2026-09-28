@@ -114,7 +114,7 @@ runs:
         echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
     - name: Go cache
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 v4
+      uses: chainguard-actions/actions-cache@1a492a110f951652a0d2d3327bc20ee36867788e # v4.3.0 v4
       if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
       id: go-cache
       with:
@@ -167,7 +167,17 @@ runs:
         fi
 
         chmod +x $script_filepath
-        ./$script_filepath >> "$GITHUB_ENV"
+        script_output_file=$(mktemp)
+        ./$script_filepath >> "$script_output_file"
+        while IFS= read -r env_line || [ -n "$env_line" ]; do
+          # Split into key and value on the first '='
+          env_key="${env_line%%=*}"
+          env_val="${env_line#*=}"
+          # Sanitize the value: remove embedded newlines/carriage returns
+          safe_val=$(printf '%s' "$env_val" | tr -d '\n\r')
+          printf '%s=%s\n' "$env_key" "$safe_val" >> "$GITHUB_ENV"
+        done < "$script_output_file"
+        rm -f "$script_output_file"
       shell: bash
       env:
         DD_CIVISIBILITY_INSTRUMENTATION_LANGUAGES: ${{ inputs.languages }}
@@ -195,23 +205,19 @@ runs:
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
       run: |
-        service_value="${INPUT_SERVICE_NAME:-$INPUT_SERVICE}"
-        safe_service=$(printf '%s' "$service_value" | tr -d '\n\r')
+        safe_service=$(printf '%s' "$INPUT_SERVICE" | tr -d '\n\r')
         echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_SERVICE_NAME: ${{ inputs.service-name }}
-        INPUT_SERVICE: ${{ inputs.service }}
+        INPUT_SERVICE: ${{ inputs.service-name != '' && inputs.service-name || inputs.service }}
     - name: Propagate API key from input to environment variables and set provider
       run: |
-        api_key_value="${INPUT_API_KEY_DEPRECATED:-$INPUT_API_KEY}"
-        safe_api_key=$(printf '%s' "$api_key_value" | tr -d '\n\r')
+        safe_api_key=$(printf '%s' "$INPUT_API_KEY" | tr -d '\n\r')
         echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_API_KEY_DEPRECATED: ${{ inputs.api-key }}
-        INPUT_API_KEY: ${{ inputs.api_key }}
+        INPUT_API_KEY: ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}
     - name: Print summary
       run: |
         echo "---" >> $GITHUB_STEP_SUMMARY
