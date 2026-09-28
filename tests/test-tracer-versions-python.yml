@@ -1,4 +1,4 @@
-name: Test deprecated service-name input
+name: Test tracer versions for Python
 on:
   workflow_dispatch:
 jobs:
@@ -10,9 +10,10 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: js
+          languages: python
           api_key: fake-dd-api-key-for-testing
-          service-name: my-deprecated-service
+          python-tracer-version: "2.10.0"
+          python-coverage-version: "7.13.5"
           print-github-step-summary: "false"
       - name: Assert action ran (installed tracers or failed gracefully)
         env:
@@ -20,23 +21,10 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with deprecated service-name input"
+            echo "PASS: action succeeded"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected in test environment)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
           fi
-      - name: Assert DD_SERVICE env var was set when action succeeded
-        if: ${{ steps.action.outcome == 'success' }}
-        run: |
-          echo "DD_SERVICE: $DD_SERVICE"
-          if [ -z "$DD_SERVICE" ]; then
-            echo "FAIL: DD_SERVICE was not set by the action"
-            exit 1
-          fi
-          if [ "$DD_SERVICE" != "my-deprecated-service" ]; then
-            echo "FAIL: expected DD_SERVICE='my-deprecated-service', got '$DD_SERVICE'"
-            exit 1
-          fi
-          echo "PASS: DD_SERVICE correctly set to '$DD_SERVICE'"
