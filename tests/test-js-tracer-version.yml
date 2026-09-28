@@ -12,7 +12,7 @@ jobs:
         with:
           languages: js
           api_key: fake-api-key-for-testing
-          js-tracer-version: "5.22.0"
+          js-tracer-version: "5.18.0"
       - name: Assert action ran with js-tracer-version input
         env:
           OUTCOME: ${{ steps.action.outcome }}
