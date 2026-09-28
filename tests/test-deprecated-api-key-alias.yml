@@ -1,4 +1,4 @@
-name: Test basic JS language instrumentation
+name: Test deprecated api-key input alias
 on:
   workflow_dispatch:
 jobs:
@@ -11,43 +11,29 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: js
-          api_key: fake-api-key-for-testing
+          languages: java
+          api-key: fake-api-key-deprecated-alias
           site: datadoghq.com
-          service: my-test-service
 
-      - name: Assert action ran (env vars set or failed gracefully)
+      - name: Assert deprecated api-key alias is accepted
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action sets DD_API_KEY and DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER
-          # regardless of whether the install script succeeds.
-          # We verify the env vars that are set by the shell steps (not the install script).
           echo "DD_API_KEY: $DD_API_KEY"
-          echo "DD_SITE: $DD_SITE"
-          echo "DD_SERVICE: $DD_SERVICE"
           echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
 
           if [ "$OUTCOME" = "success" ]; then
-            # If the action succeeded, verify env vars are set
+            # Verify the deprecated api-key alias was accepted and DD_API_KEY is set
             if [ -z "$DD_API_KEY" ]; then
-              echo "FAIL: DD_API_KEY should be set"
-              exit 1
-            fi
-            if [ "$DD_SITE" != "datadoghq.com" ]; then
-              echo "FAIL: DD_SITE should be datadoghq.com, got: $DD_SITE"
-              exit 1
-            fi
-            if [ "$DD_SERVICE" != "my-test-service" ]; then
-              echo "FAIL: DD_SERVICE should be my-test-service, got: $DD_SERVICE"
+              echo "FAIL: DD_API_KEY should be set when using deprecated api-key input"
               exit 1
             fi
             if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
               echo "FAIL: DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER should be github"
               exit 1
             fi
-            echo "PASS: action succeeded and env vars are set correctly"
+            echo "PASS: deprecated api-key alias works correctly"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected in harness with fake API key or network issues)"
           else

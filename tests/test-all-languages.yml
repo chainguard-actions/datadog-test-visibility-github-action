@@ -1,4 +1,4 @@
-name: Test basic JS language instrumentation
+name: Test all languages instrumentation
 on:
   workflow_dispatch:
 jobs:
@@ -11,26 +11,23 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: js
+          languages: all
           api_key: fake-api-key-for-testing
           site: datadoghq.com
-          service: my-test-service
+          service: my-all-languages-service
+          cache: 'false'
 
-      - name: Assert action ran (env vars set or failed gracefully)
+      - name: Assert action ran with all languages
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action sets DD_API_KEY and DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER
-          # regardless of whether the install script succeeds.
-          # We verify the env vars that are set by the shell steps (not the install script).
           echo "DD_API_KEY: $DD_API_KEY"
           echo "DD_SITE: $DD_SITE"
           echo "DD_SERVICE: $DD_SERVICE"
           echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
 
           if [ "$OUTCOME" = "success" ]; then
-            # If the action succeeded, verify env vars are set
             if [ -z "$DD_API_KEY" ]; then
               echo "FAIL: DD_API_KEY should be set"
               exit 1
@@ -39,15 +36,15 @@ jobs:
               echo "FAIL: DD_SITE should be datadoghq.com, got: $DD_SITE"
               exit 1
             fi
-            if [ "$DD_SERVICE" != "my-test-service" ]; then
-              echo "FAIL: DD_SERVICE should be my-test-service, got: $DD_SERVICE"
+            if [ "$DD_SERVICE" != "my-all-languages-service" ]; then
+              echo "FAIL: DD_SERVICE should be my-all-languages-service, got: $DD_SERVICE"
               exit 1
             fi
             if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
               echo "FAIL: DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER should be github"
               exit 1
             fi
-            echo "PASS: action succeeded and env vars are set correctly"
+            echo "PASS: action succeeded with all languages"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected in harness with fake API key or network issues)"
           else
