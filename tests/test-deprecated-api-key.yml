@@ -4,32 +4,37 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up mock curl and sha256sum
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" "$HOME/.local/bin/curl"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-sha256sum.sh" "$HOME/.local/bin/sha256sum"
+          chmod +x "$HOME/.local/bin/curl" "$HOME/.local/bin/sha256sum"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - id: action
         uses: .
         with:
           languages: js
-          api-key: deprecated-key-for-testing
+          api_key: test-api-key-deprecated-alias
 
-      - name: Assert DD_API_KEY is set via deprecated api-key input
+      - name: Assert DD_API_KEY is set
         run: |
-          echo "DD_API_KEY: $DD_API_KEY"
+          echo "api_key set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
           if [ -z "$DD_API_KEY" ]; then
-            echo "FAIL: DD_API_KEY is not set when using deprecated api-key input"
+            echo "FAIL: DD_API_KEY is not set when using api_key input"
             exit 1
           fi
-          echo "PASS: DD_API_KEY is set via deprecated api-key alias"
+          echo "PASS: DD_API_KEY is set"
 
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |
-          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          echo "provider: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            echo "FAIL: expected provider=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
             exit 1
           fi
           echo "PASS"

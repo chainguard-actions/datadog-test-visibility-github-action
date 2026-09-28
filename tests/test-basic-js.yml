@@ -1,45 +1,50 @@
-name: Test basic JS language instrumentation
+name: Test basic JS language setup
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up mock curl and sha256sum
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" "$HOME/.local/bin/curl"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-sha256sum.sh" "$HOME/.local/bin/sha256sum"
+          chmod +x "$HOME/.local/bin/curl" "$HOME/.local/bin/sha256sum"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - id: action
         uses: .
         with:
           languages: js
-          api_key: fake-api-key-for-testing
+          api_key: test-api-key-12345
           site: datadoghq.com
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
+        run: |
+          echo "provider: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
 
       - name: Assert DD_API_KEY is set
         run: |
-          echo "DD_API_KEY: $DD_API_KEY"
+          echo "api_key set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
           if [ -z "$DD_API_KEY" ]; then
             echo "FAIL: DD_API_KEY is not set"
-            exit 1
-          fi
-          echo "PASS: DD_API_KEY is set"
-
-      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set to github
-        run: |
-          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
-          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
             exit 1
           fi
           echo "PASS"
 
       - name: Assert DD_SITE is set
         run: |
-          echo "DD_SITE: $DD_SITE"
+          echo "site: $DD_SITE"
           if [ "$DD_SITE" != "datadoghq.com" ]; then
-            echo "FAIL: expected 'datadoghq.com', got '$DD_SITE'"
+            echo "FAIL: expected DD_SITE=datadoghq.com, got '$DD_SITE'"
             exit 1
           fi
           echo "PASS"
