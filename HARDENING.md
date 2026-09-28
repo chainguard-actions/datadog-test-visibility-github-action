@@ -10,50 +10,46 @@
 
 **Harden Agent Version:** `2`
 
-Action **DataDog--test-visibility-github-action/v3.0.0** was hardened automatically. 6 finding(s) were identified and resolved across 2 iteration(s).
+Action **DataDog--test-visibility-github-action/v3.0.0** was hardened automatically. 6 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Sub-rule (a): Multiple `run:` blocks in action.yml directly interpolate `${{ ... }}` expressions inside shell command strings, allowing an attacker-controlled value to inject shell metacharacters before the shell ever sees the string.
+Multiple `${{ ... }}` expressions are interpolated directly inside `run:` shell command strings (rule a), allowing an attacker to inject arbitrary shell commands. Affected lines:
+- Line 90: `echo "JOB_CHECK_RUN_ID=${{ job.check_run_id }}" >> $GITHUB_ENV` — `job.check_run_id` interpolated directly in shell
+- Line 173: `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"` — `inputs.site` interpolated directly in shell
+- Line 179: `echo "DD_SERVICE=${{ inputs.service-name != '' && inputs.service-name || inputs.service }}" >> "$GITHUB_ENV"` — `inputs.service` and `inputs.service-name` interpolated directly in shell
+- Line 184: `echo "DD_API_KEY=${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}" >> "$GITHUB_ENV"` — `inputs.api-key` and `inputs.api_key` interpolated directly in shell
+- Line 215: `if [ "${{ inputs.print-github-step-summary }}" == "false" ]` — `inputs.print-github-step-summary` interpolated directly in shell
 
-1. Step 'Set global envs and github path': `echo "JOB_CHECK_RUN_ID=${{ job.check_run_id }}" >> $GITHUB_ENV` — `job.check_run_id` is a workflow-context value interpolated directly into the shell command.
-
-2. Step 'Propagate optional site input to environment variable': `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"` — `inputs.site` is attacker-controlled and interpolated directly.
-
-3. Step 'Propagate optional service input to environment variable': `echo "DD_SERVICE=${{ inputs.service-name != '' && inputs.service-name || inputs.service }}" >> "$GITHUB_ENV"` — `inputs.service` and `inputs.service-name` are attacker-controlled and interpolated directly.
-
-4. Step 'Propagate API key from input to environment variables and set provider': `echo "DD_API_KEY=${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}" >> "$GITHUB_ENV"` — `inputs.api-key` and `inputs.api_key` are interpolated directly.
-
-5. Step 'Print summary': `if [ "${{ inputs.print-github-step-summary }}" == "false" ]` — `inputs.print-github-step-summary` is interpolated directly into a shell conditional.
+All of these violate rule (a): any `${{ ... }}` expression directly inside a `run:` block is a script-injection risk because YAML template substitution happens before the shell ever sees the string, allowing newlines, semicolons, backticks, and other shell metacharacters to be injected.
 
 Locations:
 
-- `action.yml:87`
-- `action.yml:168`
-- `action.yml:174`
-- `action.yml:180`
-- `action.yml:218`
+- `action.yml:90`
+- `action.yml:173`
+- `action.yml:179`
+- `action.yml:184`
+- `action.yml:215`
 
 ### github-env-injection (severity: high)
 
-Multiple `run:` blocks write values derived from untrusted `inputs.*` context directly to `$GITHUB_ENV` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). An attacker can inject newlines into these values to add arbitrary environment variable definitions that affect subsequent steps.
+Untrusted input values are written directly to `$GITHUB_ENV` and `$GITHUB_PATH` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). An attacker can inject newlines into these values to set arbitrary environment variables or path entries for subsequent steps.
 
-1. Step 'Propagate optional site input to environment variable': `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"` — `inputs.site` written unsanitized to GITHUB_ENV.
-
-2. Step 'Propagate optional service input to environment variable': `echo "DD_SERVICE=${{ inputs.service-name != '' && inputs.service-name || inputs.service }}" >> "$GITHUB_ENV"` — `inputs.service` / `inputs.service-name` written unsanitized to GITHUB_ENV.
-
-3. Step 'Propagate API key from input to environment variables and set provider': `echo "DD_API_KEY=${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}" >> "$GITHUB_ENV"` — `inputs.api-key` / `inputs.api_key` written unsanitized to GITHUB_ENV.
-
-4. Step 'Set global envs and github path': `echo "JOB_CHECK_RUN_ID=${{ job.check_run_id }}" >> $GITHUB_ENV` — `job.check_run_id` written unsanitized to GITHUB_ENV.
+- Line 90: `echo "JOB_CHECK_RUN_ID=${{ job.check_run_id }}" >> $GITHUB_ENV` — `job.check_run_id` (workflow-controllable context) written to GITHUB_ENV without sanitization
+- Line 91: `echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH` — `GITHUB_ACTION_PATH` is set from `${{ github.action_path }}` in the env block (an inherited env var from the calling workflow context) and written to GITHUB_PATH without sanitization
+- Line 173: `echo "DD_SITE=${{ inputs.site }}" >> "$GITHUB_ENV"` — `inputs.site` written to GITHUB_ENV without sanitization
+- Line 179: `echo "DD_SERVICE=${{ inputs.service-name != '' && inputs.service-name || inputs.service }}" >> "$GITHUB_ENV"` — `inputs.service`/`inputs.service-name` written to GITHUB_ENV without sanitization
+- Line 184: `echo "DD_API_KEY=${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}" >> "$GITHUB_ENV"` — `inputs.api-key`/`inputs.api_key` written to GITHUB_ENV without sanitization
 
 Locations:
 
-- `action.yml:87`
-- `action.yml:168`
-- `action.yml:174`
-- `action.yml:180`
+- `action.yml:90`
+- `action.yml:91`
+- `action.yml:173`
+- `action.yml:179`
+- `action.yml:184`
 
 ### static-inline-injection (severity: high)
 
@@ -95,23 +91,10 @@ Locations:
 
 **Notes:**
 
-Fixed all 6 findings in hardened/action/action.yml:
-
-1. 'Set global envs and github path' step: Moved `${{ job.check_run_id }}` to env block as `JOB_CHECK_RUN_ID`, then sanitized with `printf '%s' "$JOB_CHECK_RUN_ID" | tr -d '\n\r'` before writing to $GITHUB_ENV.
-
-2. 'Propagate optional site input to environment variable' step: Moved `${{ inputs.site }}` to env block as `INPUT_SITE`, then sanitized with `printf '%s' "$INPUT_SITE" | tr -d '\n\r'` before writing to $GITHUB_ENV.
-
-3. 'Propagate optional service input to environment variable' step: Moved `${{ inputs.service-name != '' && inputs.service-name || inputs.service }}` to env block as `INPUT_SERVICE_VALUE`, then sanitized before writing to $GITHUB_ENV.
-
-4. 'Propagate API key from input to environment variables and set provider' step: Moved `${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}` to env block as `INPUT_API_KEY_VALUE`, then sanitized before writing to $GITHUB_ENV.
-
-5. 'Print summary' step: Moved `${{ inputs.print-github-step-summary }}` to env block as `INPUT_PRINT_GITHUB_STEP_SUMMARY` and referenced it as `$INPUT_PRINT_GITHUB_STEP_SUMMARY` in the shell conditional.
-
-### Iteration 2
-
-**Fixes applied:** github-env-injection, script-injection
-
-**Notes:**
-
-Fixed two security findings: (1) github-env-injection in action.yml: sanitized the $GITHUB_ACTION_PATH value before writing to $GITHUB_PATH using `printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r'` to strip newlines. (2) script-injection in .github/workflows/ci.yml: moved all ${{ matrix.layout }}, ${{ matrix.project_go }}, ${{ matrix.second_project_go }} expressions from the 'Create Go Scenario' run: block into an env: block, and moved ${{ steps.run-action.outcome }} and ${{ matrix.case_id }} from the 'Assert Go Scenario' run: block into an env: block. All shell references were updated to use the corresponding plain environment variable names.
+Fixed all script-injection and github-env-injection findings in action.yml:
+1. 'Set global envs and github path' step: moved ${{ job.check_run_id }} to env block as JOB_CHECK_RUN_ID, sanitized with tr -d '\n\r' before writing to GITHUB_ENV; also sanitized GITHUB_ACTION_PATH before writing to GITHUB_PATH.
+2. 'Propagate optional site input to environment variable' step: moved ${{ inputs.site }} to env block as INPUT_SITE, sanitized before writing to GITHUB_ENV.
+3. 'Propagate optional service input to environment variable' step: moved ${{ inputs.service-name != '' && inputs.service-name || inputs.service }} to env block as INPUT_SERVICE, sanitized before writing to GITHUB_ENV.
+4. 'Propagate API key from input to environment variables and set provider' step: moved ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }} to env block as INPUT_API_KEY, sanitized before writing to GITHUB_ENV.
+5. 'Print summary' step: moved ${{ inputs.print-github-step-summary }} to env block as INPUT_PRINT_GITHUB_STEP_SUMMARY, referenced as plain env var in shell.
 
