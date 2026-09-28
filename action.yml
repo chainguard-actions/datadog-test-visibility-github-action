@@ -99,7 +99,7 @@ runs:
         echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
     - name: Go cache
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      uses: chainguard-actions/actions-cache@1a492a110f951652a0d2d3327bc20ee36867788e # v4
       if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
       id: go-cache
       with:
@@ -152,7 +152,7 @@ runs:
         fi
 
         chmod +x $script_filepath
-        ./$script_filepath | tr -d '\r' >> "$GITHUB_ENV"
+        ./$script_filepath >> "$GITHUB_ENV"
       shell: bash
       env:
         DD_CIVISIBILITY_INSTRUMENTATION_LANGUAGES: ${{ inputs.languages }}
@@ -176,31 +176,19 @@ runs:
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
       run: |
-        if [ -n "$INPUT_SERVICE_NAME" ]; then
-          service_value="$INPUT_SERVICE_NAME"
-        else
-          service_value="$INPUT_SERVICE"
-        fi
-        safe_service=$(printf '%s' "$service_value" | tr -d '\n\r')
+        safe_service=$(printf '%s' "$INPUT_SERVICE" | tr -d '\n\r')
         echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_SERVICE: ${{ inputs.service }}
-        INPUT_SERVICE_NAME: ${{ inputs.service-name }}
+        INPUT_SERVICE: ${{ inputs.service-name != '' && inputs.service-name || inputs.service }}
     - name: Propagate API key from input to environment variables and set provider
       run: |
-        if [ -n "$INPUT_API_KEY_HYPHEN" ]; then
-          api_key_value="$INPUT_API_KEY_HYPHEN"
-        else
-          api_key_value="$INPUT_API_KEY_UNDERSCORE"
-        fi
-        safe_api_key=$(printf '%s' "$api_key_value" | tr -d '\n\r')
+        safe_api_key=$(printf '%s' "$INPUT_API_KEY" | tr -d '\n\r')
         echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_API_KEY_HYPHEN: ${{ inputs.api-key }}
-        INPUT_API_KEY_UNDERSCORE: ${{ inputs.api_key }}
+        INPUT_API_KEY: ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}
     - name: Print summary
       run: |
         echo "---" >> $GITHUB_STEP_SUMMARY
@@ -228,10 +216,10 @@ runs:
         fi
         echo "---" >> $GITHUB_STEP_SUMMARY
 
-        if [ "$PRINT_GITHUB_STEP_SUMMARY" == "false" ]; then
+        if [ "$INPUT_PRINT_GITHUB_STEP_SUMMARY" == "false" ]; then
           cat $GITHUB_STEP_SUMMARY
           rm -f $GITHUB_STEP_SUMMARY
         fi
       shell: bash
       env:
-        PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
+        INPUT_PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
