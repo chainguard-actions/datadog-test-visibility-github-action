@@ -6,17 +6,58 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake tools to intercept download and bypass checksum
+        run: |
+          FAKE_BIN="$GITHUB_WORKSPACE/.fake-bin"
+          mkdir -p "$FAKE_BIN"
+
+          # Write the fake install script that outputs env vars for Go
+          printf '#!/bin/sh\necho "DD_TRACER_VERSION_GO=v0.55.0"\necho "DD_CIVISIBILITY_ENABLED=true"\n' > /tmp/fake-install-datadog.sh
+          chmod +x /tmp/fake-install-datadog.sh
+
+          # Fake curl: serves the fake install script, honoring -o flag
+          printf '#!/bin/sh\nout=""\nprev_was_output=0\nfor arg in "$@"; do\n  if [ "$prev_was_output" = "1" ]; then\n    out="$arg"\n    prev_was_output=0\n    continue\n  fi\n  case "$arg" in\n    -o|--output) prev_was_output=1 ;;\n    -Lo) prev_was_output=1 ;;\n  esac\ndone\ncase "$*" in\n  *install.datadoghq.com*|*install_test_visibility*)\n    if [ -n "$out" ]; then\n      cat /tmp/fake-install-datadog.sh > "$out"\n    else\n      cat /tmp/fake-install-datadog.sh\n    fi\n    exit 0\n    ;;\nesac\nexec /usr/bin/curl "$@"\n' > "$FAKE_BIN/curl"
+          chmod +x "$FAKE_BIN/curl"
+
+          # Fake sha256sum: always passes
+          printf '#!/bin/sh\necho "OK"\nexit 0\n' > "$FAKE_BIN/sha256sum"
+          chmod +x "$FAKE_BIN/sha256sum"
+
+          echo "$FAKE_BIN" >> "$GITHUB_PATH"
+
       - id: action
         uses: .
-        continue-on-error: true
         with:
           languages: go
           api_key: fake-api-key-for-testing
-          go-tracer-version: latest
+          go-tracer-version: "v0.55.0"
           go-module-dir: "."
-          print-github-step-summary: "false"
           cache: "false"
-      - name: Assert action ran (may fail due to network/API key)
+
+      - name: Assert DD_API_KEY is set
         run: |
-          echo "Action outcome: ${{ steps.action.outcome }}"
-          echo "PASS: action step executed with go inputs"
+          echo "DD_API_KEY is set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY is not set"
+            exit 1
+          fi
+          echo "PASS: DD_API_KEY is set"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is github
+        run: |
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected 'github', got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_TRACER_VERSION_GO is set
+        run: |
+          echo "DD_TRACER_VERSION_GO: $DD_TRACER_VERSION_GO"
+          if [ -z "$DD_TRACER_VERSION_GO" ]; then
+            echo "FAIL: DD_TRACER_VERSION_GO is not set"
+            exit 1
+          fi
+          echo "PASS: DD_TRACER_VERSION_GO=$DD_TRACER_VERSION_GO"

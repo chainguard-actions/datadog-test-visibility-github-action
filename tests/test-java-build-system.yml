@@ -1,4 +1,4 @@
-name: Test tracer version inputs
+name: Test Java instrumented build system input
 on:
   workflow_dispatch:
 jobs:
@@ -12,8 +12,8 @@ jobs:
           FAKE_BIN="$GITHUB_WORKSPACE/.fake-bin"
           mkdir -p "$FAKE_BIN"
 
-          # Write the fake install script that outputs env vars for multiple languages
-          printf '#!/bin/sh\necho "DD_TRACER_VERSION_JS=4.1.0"\necho "DD_TRACER_VERSION_PYTHON=2.1.0"\necho "DD_TRACER_VERSION_RUBY=1.5.0"\necho "DD_TRACER_VERSION_DOTNET=3.2.0"\necho "DD_TRACER_VERSION_JAVA=1.30.0"\necho "DD_CIVISIBILITY_ENABLED=true"\n' > /tmp/fake-install-datadog.sh
+          # Write the fake install script that outputs env vars for Java
+          printf '#!/bin/sh\necho "DD_TRACER_VERSION_JAVA=1.30.0"\necho "DD_CIVISIBILITY_ENABLED=true"\n' > /tmp/fake-install-datadog.sh
           chmod +x /tmp/fake-install-datadog.sh
 
           # Fake curl: serves the fake install script, honoring -o flag
@@ -29,14 +29,9 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js python ruby dotnet java
+          languages: java
           api_key: fake-api-key-for-testing
-          js-tracer-version: "4.1.0"
-          python-tracer-version: "2.1.0"
-          python-coverage-version: "7.2.0"
-          ruby-tracer-version: "1.5.0"
-          dotnet-tracer-version: "3.2.0"
-          java-tracer-version: "1.30.0"
+          java-instrumented-build-system: gradle
 
       - name: Assert DD_API_KEY is set
         run: |
@@ -56,31 +51,11 @@ jobs:
           fi
           echo "PASS"
 
-      - name: Assert tracer version env vars are set
+      - name: Assert DD_TRACER_VERSION_JAVA is set
         run: |
-          echo "DD_TRACER_VERSION_JS: $DD_TRACER_VERSION_JS"
-          echo "DD_TRACER_VERSION_PYTHON: $DD_TRACER_VERSION_PYTHON"
-          echo "DD_TRACER_VERSION_RUBY: $DD_TRACER_VERSION_RUBY"
-          echo "DD_TRACER_VERSION_DOTNET: $DD_TRACER_VERSION_DOTNET"
           echo "DD_TRACER_VERSION_JAVA: $DD_TRACER_VERSION_JAVA"
-          if [ -z "$DD_TRACER_VERSION_JS" ]; then
-            echo "FAIL: DD_TRACER_VERSION_JS is not set"
-            exit 1
-          fi
-          if [ -z "$DD_TRACER_VERSION_PYTHON" ]; then
-            echo "FAIL: DD_TRACER_VERSION_PYTHON is not set"
-            exit 1
-          fi
-          if [ -z "$DD_TRACER_VERSION_RUBY" ]; then
-            echo "FAIL: DD_TRACER_VERSION_RUBY is not set"
-            exit 1
-          fi
-          if [ -z "$DD_TRACER_VERSION_DOTNET" ]; then
-            echo "FAIL: DD_TRACER_VERSION_DOTNET is not set"
-            exit 1
-          fi
           if [ -z "$DD_TRACER_VERSION_JAVA" ]; then
             echo "FAIL: DD_TRACER_VERSION_JAVA is not set"
             exit 1
           fi
-          echo "PASS: all tracer version env vars are set"
+          echo "PASS: DD_TRACER_VERSION_JAVA=$DD_TRACER_VERSION_JAVA"
