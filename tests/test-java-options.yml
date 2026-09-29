@@ -1,4 +1,4 @@
-name: Test tracer version inputs
+name: Test Java tracer options
 on:
   workflow_dispatch:
 jobs:
@@ -18,13 +18,13 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
+          languages: java
           api_key: test-api-key-12345
-          js-tracer-version: "5.1.0"
-          python-tracer-version: "2.3.0"
-          python-coverage-version: "7.5.0"
-          ruby-tracer-version: "1.2.0"
-          dotnet-tracer-version: "3.0.0"
+          java-tracer-version: "1.30.0"
+          java-instrumented-build-system: gradle
+          java-tracer-repository-url: https://repo.example.com/maven
+          java-tracer-repository-auth-header: "Authorization: Bearer test-token"
+          java-tracer-auth-disable-redirects: "true"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |

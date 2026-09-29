@@ -1,4 +1,4 @@
-name: Test tracer version inputs
+name: Test Go tracer options
 on:
   workflow_dispatch:
 jobs:
@@ -18,13 +18,11 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
+          languages: go
           api_key: test-api-key-12345
-          js-tracer-version: "5.1.0"
-          python-tracer-version: "2.3.0"
-          python-coverage-version: "7.5.0"
-          ruby-tracer-version: "1.2.0"
-          dotnet-tracer-version: "3.0.0"
+          go-tracer-version: "v0.14.0"
+          go-module-dir: "."
+          cache: "false"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |
