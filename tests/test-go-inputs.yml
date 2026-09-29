@@ -1,4 +1,4 @@
-name: Test tracer version inputs for java, js, python, ruby
+name: Test go-tracer-version and go-module-dir inputs
 on:
   workflow_dispatch:
 jobs:
@@ -10,14 +10,12 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: java js python ruby
+          languages: go
           api_key: fake-dd-api-key-for-testing
-          java-tracer-version: "1.40.0"
-          js-tracer-version: "5.25.0"
-          python-tracer-version: "2.15.0"
-          ruby-tracer-version: "1.10.0"
-          java-instrumented-build-system: gradle
+          go-tracer-version: "0.22.0"
+          go-module-dir: "."
           site: datadoghq.com
+          cache: "false"
       - name: Assert action ran (env vars set or failed gracefully)
         env:
           OUTCOME: ${{ steps.action.outcome }}
