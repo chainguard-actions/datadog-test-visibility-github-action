@@ -176,19 +176,31 @@ runs:
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
       run: |
-        safe_service=$(printf '%s' "$INPUT_SERVICE" | tr -d '\n\r')
+        if [ -n "$INPUT_SERVICE_NAME" ]; then
+          raw_service="$INPUT_SERVICE_NAME"
+        else
+          raw_service="$INPUT_SERVICE"
+        fi
+        safe_service=$(printf '%s' "$raw_service" | tr -d '\n\r')
         echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_SERVICE: ${{ inputs.service-name != '' && inputs.service-name || inputs.service }}
+        INPUT_SERVICE: ${{ inputs.service }}
+        INPUT_SERVICE_NAME: ${{ inputs.service-name }}
     - name: Propagate API key from input to environment variables and set provider
       run: |
-        safe_api_key=$(printf '%s' "$INPUT_API_KEY" | tr -d '\n\r')
+        if [ -n "$INPUT_API_KEY_HYPHEN" ]; then
+          raw_api_key="$INPUT_API_KEY_HYPHEN"
+        else
+          raw_api_key="$INPUT_API_KEY"
+        fi
+        safe_api_key=$(printf '%s' "$raw_api_key" | tr -d '\n\r')
         echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_API_KEY: ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}
+        INPUT_API_KEY: ${{ inputs.api_key }}
+        INPUT_API_KEY_HYPHEN: ${{ inputs.api-key }}
     - name: Print summary
       run: |
         echo "---" >> $GITHUB_STEP_SUMMARY
