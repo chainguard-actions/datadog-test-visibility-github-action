@@ -12,8 +12,7 @@ jobs:
         with:
           languages: dotnet
           api_key: fake-api-key-for-testing
-          dotnet-tracer-version: "3.3.0"
-          print-github-step-summary: "false"
+          dotnet-tracer-version: "2.49.0"
       - name: Assert action ran with dotnet-tracer-version input
         env:
           OUTCOME: ${{ steps.action.outcome }}

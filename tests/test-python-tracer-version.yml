@@ -12,8 +12,7 @@ jobs:
         with:
           languages: python
           api_key: fake-api-key-for-testing
-          python-tracer-version: "2.15.0"
-          print-github-step-summary: "false"
+          python-tracer-version: "2.9.0"
       - name: Assert action ran with python-tracer-version input
         env:
           OUTCOME: ${{ steps.action.outcome }}
