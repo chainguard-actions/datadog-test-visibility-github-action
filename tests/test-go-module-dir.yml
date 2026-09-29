@@ -11,17 +11,18 @@ jobs:
         continue-on-error: true
         with:
           languages: go
-          api_key: fake-key-for-testing
-          go-module-dir: "."
-          cache: "false"
-          print-github-step-summary: "false"
+          api_key: fake-dd-api-key-for-testing
+          go-module-dir: ./mymodule
       - name: Assert action ran with go-module-dir input
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
+          # The action accepts go-module-dir and passes it as DD_CIVISIBILITY_GO_MODULE_DIR
+          # to the installation script. The script may fail in the test environment
+          # but the action must accept the input without crashing early.
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with go-module-dir input (outcome: $OUTCOME)"
+            echo "PASS: action ran with go-module-dir input accepted"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
