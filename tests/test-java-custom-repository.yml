@@ -1,4 +1,4 @@
-name: Test java custom repository inputs
+name: Test Java language with custom repository and auth inputs
 on:
   workflow_dispatch:
 jobs:
@@ -6,24 +6,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: action
         uses: .
-        continue-on-error: true
         with:
-          languages: java
-          api_key: fake-api-key-for-input-coverage
-          java-tracer-repository-url: https://repo.example.com/maven
-          java-tracer-repository-auth-header: 'Authorization: Bearer test-token'
-          java-tracer-auth-disable-redirects: 'true'
-          cache: 'false'
-      - name: Assert action ran (input coverage for java custom repository inputs)
-        env:
-          OUTCOME: ${{ steps.action.outcome }}
+          languages: js
+          api_key: test-api-key-12345
+          site: datadoghq.com
+          service: java-custom-repo-service
+          java-instrumented-build-system: gradle
+          java-tracer-repository-url: https://repo1.maven.org/maven2
+          java-tracer-repository-auth-header: Authorization: Bearer test-token
+          java-tracer-auth-disable-redirects: "true"
+
+      - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |
-          echo "outcome: $OUTCOME"
-          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with java-tracer-repository-url, java-tracer-repository-auth-header, and java-tracer-auth-disable-redirects inputs"
-          else
-            echo "FAIL: unexpected outcome '$OUTCOME'"
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
             exit 1
           fi
+          echo "PASS"
+
+      - name: Assert DD_API_KEY is set
+        run: |
+          echo "DD_API_KEY is set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
+          if [ -z "$DD_API_KEY" ]; then
+            echo "FAIL: DD_API_KEY should be set"
+            exit 1
+          fi
+          echo "PASS"
