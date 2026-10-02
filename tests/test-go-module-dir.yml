@@ -1,4 +1,4 @@
-name: Test Go language with go-module-dir input
+name: Test Go instrumentation with go-module-dir input
 on:
   workflow_dispatch:
 jobs:
@@ -10,11 +10,12 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
+          languages: go
           api_key: test-api-key-12345
           site: datadoghq.com
-          service: go-module-service
-          go-module-dir: ./mymodule
+          service: my-go-service
+          go-module-dir: ./
+          cache: 'false'
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |
@@ -30,6 +31,15 @@ jobs:
           echo "DD_API_KEY is set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
           if [ -z "$DD_API_KEY" ]; then
             echo "FAIL: DD_API_KEY should be set"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SERVICE is set
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-go-service" ]; then
+            echo "FAIL: expected DD_SERVICE=my-go-service, got '$DD_SERVICE'"
             exit 1
           fi
           echo "PASS"

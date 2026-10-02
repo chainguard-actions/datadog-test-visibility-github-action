@@ -1,4 +1,4 @@
-name: Test Java language with custom repository and auth inputs
+name: Test Java instrumentation with custom repository inputs
 on:
   workflow_dispatch:
 jobs:
@@ -10,14 +10,14 @@ jobs:
       - id: action
         uses: .
         with:
-          languages: js
+          languages: java
           api_key: test-api-key-12345
           site: datadoghq.com
-          service: java-custom-repo-service
+          service: my-java-service
           java-instrumented-build-system: gradle
           java-tracer-repository-url: https://repo1.maven.org/maven2
-          java-tracer-repository-auth-header: Authorization: Bearer test-token
-          java-tracer-auth-disable-redirects: "true"
+          java-tracer-repository-auth-header: 'Authorization: Bearer test-token'
+          java-tracer-auth-disable-redirects: 'true'
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |
@@ -33,6 +33,15 @@ jobs:
           echo "DD_API_KEY is set: $([ -n "$DD_API_KEY" ] && echo yes || echo no)"
           if [ -z "$DD_API_KEY" ]; then
             echo "FAIL: DD_API_KEY should be set"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert DD_SERVICE is set
+        run: |
+          echo "DD_SERVICE: $DD_SERVICE"
+          if [ "$DD_SERVICE" != "my-java-service" ]; then
+            echo "FAIL: expected DD_SERVICE=my-java-service, got '$DD_SERVICE'"
             exit 1
           fi
           echo "PASS"
