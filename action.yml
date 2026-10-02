@@ -176,20 +176,34 @@ runs:
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
       env:
-        INPUT_SERVICE_NAME: ${{ inputs.service-name != '' && inputs.service-name || inputs.service }}
+        INPUT_SERVICE: ${{ inputs.service }}
+        INPUT_SERVICE_NAME: ${{ inputs.service-name }}
       run: |
-        safe_service=$(printf '%s' "$INPUT_SERVICE_NAME" | tr -d '\n\r')
+        if [ -n "$INPUT_SERVICE_NAME" ]; then
+          raw_service="$INPUT_SERVICE_NAME"
+        else
+          raw_service="$INPUT_SERVICE"
+        fi
+        safe_service=$(printf '%s' "$raw_service" | tr -d '\n\r')
         echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
       shell: bash
     - name: Propagate API key from input to environment variables and set provider
       env:
-        INPUT_API_KEY: ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}
+        INPUT_API_KEY: ${{ inputs.api_key }}
+        INPUT_API_KEY_DEPRECATED: ${{ inputs.api-key }}
       run: |
-        safe_api_key=$(printf '%s' "$INPUT_API_KEY" | tr -d '\n\r')
+        if [ -n "$INPUT_API_KEY_DEPRECATED" ]; then
+          raw_api_key="$INPUT_API_KEY_DEPRECATED"
+        else
+          raw_api_key="$INPUT_API_KEY"
+        fi
+        safe_api_key=$(printf '%s' "$raw_api_key" | tr -d '\n\r')
         echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
     - name: Print summary
+      env:
+        INPUT_PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
       run: |
         echo "---" >> $GITHUB_STEP_SUMMARY
         echo '<a target="_blank" title="Datadog Test Visibility" href="https://docs.datadoghq.com/tests/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/DataDog/test-visibility-github-action/main/logos/dd_logo_h_white.svg"><img width="200" alt="Datadog Test Visibility" src="https://raw.githubusercontent.com/DataDog/test-visibility-github-action/main/logos/dd_logo_h_rgb.svg"></picture></a>' >> $GITHUB_STEP_SUMMARY
@@ -221,5 +235,3 @@ runs:
           rm -f $GITHUB_STEP_SUMMARY
         fi
       shell: bash
-      env:
-        INPUT_PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
