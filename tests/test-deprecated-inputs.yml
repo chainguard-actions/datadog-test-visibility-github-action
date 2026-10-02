@@ -19,7 +19,7 @@ jobs:
         uses: .
         with:
           languages: js
-          api-key: test-api-key-deprecated
+          api-key: test-api-key-hyphen-alias
           service-name: my-deprecated-service
 
       - name: Assert DD_API_KEY is set via deprecated api-key input
@@ -38,7 +38,7 @@ jobs:
             echo "FAIL: expected DD_SERVICE=my-deprecated-service, got '$DD_SERVICE'"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: DD_SERVICE is set correctly via service-name"
 
       - name: Assert DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER is set
         run: |

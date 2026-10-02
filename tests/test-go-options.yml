@@ -20,7 +20,8 @@ jobs:
         with:
           languages: go
           api_key: test-api-key-12345
-          go-tracer-version: "v0.14.0"
+          site: datadoghq.com
+          go-tracer-version: "v0.48.0"
           go-module-dir: "."
           cache: "false"
 
@@ -28,7 +29,7 @@ jobs:
         run: |
           echo "provider: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            echo "FAIL: expected provider=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
             exit 1
           fi
           echo "PASS"

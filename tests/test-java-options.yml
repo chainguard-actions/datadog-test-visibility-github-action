@@ -20,9 +20,10 @@ jobs:
         with:
           languages: java
           api_key: test-api-key-12345
-          java-tracer-version: "1.30.0"
+          site: datadoghq.com
+          java-tracer-version: "1.35.0"
           java-instrumented-build-system: gradle
-          java-tracer-repository-url: https://repo.example.com/maven
+          java-tracer-repository-url: https://repo1.maven.org/maven2
           java-tracer-repository-auth-header: "Authorization: Bearer test-token"
           java-tracer-auth-disable-redirects: "true"
 
@@ -30,7 +31,7 @@ jobs:
         run: |
           echo "provider: $DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
           if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
-            echo "FAIL: expected DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
+            echo "FAIL: expected provider=github, got '$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER'"
             exit 1
           fi
           echo "PASS"
