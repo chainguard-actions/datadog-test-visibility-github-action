@@ -12,14 +12,14 @@ jobs:
         with:
           languages: go
           api_key: fake-api-key-for-testing
-          go-tracer-version: "v0.22.0"
+          go-tracer-version: "0.14.0"
       - name: Assert action ran with go-tracer-version input
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with go-tracer-version input (outcome: $OUTCOME)"
+            echo "PASS: action accepted go-tracer-version input (outcome: $OUTCOME)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

@@ -12,7 +12,7 @@ jobs:
         with:
           languages: java
           api_key: fake-api-key-for-testing
-          java-tracer-version: "1.36.0"
+          java-tracer-version: "1.40.0"
           java-instrumented-build-system: gradle
       - name: Assert action ran with java-tracer-version and java-instrumented-build-system inputs
         env:
@@ -20,7 +20,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with java-tracer-version and java-instrumented-build-system inputs (outcome: $OUTCOME)"
+            echo "PASS: action accepted java-tracer-version and java-instrumented-build-system inputs (outcome: $OUTCOME)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
