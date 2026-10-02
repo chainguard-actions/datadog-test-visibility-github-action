@@ -81,8 +81,8 @@ runs:
       run: |
         echo "INSTALLATION_SCRIPT_URL=$INSTALLATION_SCRIPT_URL" >> $GITHUB_ENV
         echo "INSTALLATION_SCRIPT_CHECKSUM=$INSTALLATION_SCRIPT_CHECKSUM" >> $GITHUB_ENV
-        safe_check_run_id=$(printf '%s' "$JOB_CHECK_RUN_ID" | tr -d '\n\r')
-        echo "JOB_CHECK_RUN_ID=$safe_check_run_id" >> $GITHUB_ENV
+        safe_job_check_run_id=$(printf '%s' "$JOB_CHECK_RUN_ID_INPUT" | tr -d '\n\r')
+        echo "JOB_CHECK_RUN_ID=$safe_job_check_run_id" >> $GITHUB_ENV
         safe_action_path=$(printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r')
         echo "$safe_action_path" >> $GITHUB_PATH
       shell: bash
@@ -90,7 +90,7 @@ runs:
         INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v11.sh
         INSTALLATION_SCRIPT_CHECKSUM: fc64c45fd4b45b4b01773c58a3a116bef212dc4095508a6e27e19e50e901bd55
         GITHUB_ACTION_PATH: ${{ github.action_path }}
-        JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+        JOB_CHECK_RUN_ID_INPUT: ${{ job.check_run_id }}
     - name: Get Go cache directories
       if: ${{ inputs.cache == 'true' && (contains(inputs.languages, 'go') || inputs.languages == 'all') }}
       id: go-cache-paths
@@ -155,13 +155,7 @@ runs:
         fi
 
         chmod +x $script_filepath
-        script_output_file=$(mktemp)
-        ./$script_filepath >> "$script_output_file"
-        while IFS= read -r line || [ -n "$line" ]; do
-          safe_line=$(printf '%s' "$line" | tr -d '\n\r')
-          printf '%s\n' "$safe_line" >> "$GITHUB_ENV"
-        done < "$script_output_file"
-        rm -f "$script_output_file"
+        ./$script_filepath >> "$GITHUB_ENV"
       shell: bash
       env:
         DD_CIVISIBILITY_INSTRUMENTATION_LANGUAGES: ${{ inputs.languages }}
@@ -177,31 +171,27 @@ runs:
     - name: Propagate optional site input to environment variable
       if: "${{ inputs.site != '' }}"
       run: |
-        safe_site=$(printf '%s' "$INPUT_SITE" | tr -d '\n\r')
-        echo "DD_SITE=$safe_site" >> "$GITHUB_ENV"
+        safe=$(printf '%s' "$DD_SITE_INPUT" | tr -d '\n\r')
+        echo "DD_SITE=$safe" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_SITE: ${{ inputs.site }}
+        DD_SITE_INPUT: ${{ inputs.site }}
     - name: Propagate optional service input to environment variable
       if: "${{ inputs.service != '' || inputs.service-name != '' }}"
       run: |
-        service_value="${INPUT_SERVICE_NAME:-$INPUT_SERVICE}"
-        safe_service=$(printf '%s' "$service_value" | tr -d '\n\r')
-        echo "DD_SERVICE=$safe_service" >> "$GITHUB_ENV"
+        safe=$(printf '%s' "$DD_SERVICE_INPUT" | tr -d '\n\r')
+        echo "DD_SERVICE=$safe" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_SERVICE: ${{ inputs.service }}
-        INPUT_SERVICE_NAME: ${{ inputs.service-name }}
+        DD_SERVICE_INPUT: ${{ inputs.service-name != '' && inputs.service-name || inputs.service }}
     - name: Propagate API key from input to environment variables and set provider
       run: |
-        api_key_value="${INPUT_API_KEY_HYPHEN:-$INPUT_API_KEY_UNDERSCORE}"
-        safe_api_key=$(printf '%s' "$api_key_value" | tr -d '\n\r')
-        echo "DD_API_KEY=$safe_api_key" >> "$GITHUB_ENV"
+        safe=$(printf '%s' "$DD_API_KEY_INPUT" | tr -d '\n\r')
+        echo "DD_API_KEY=$safe" >> "$GITHUB_ENV"
         echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=github" >> "$GITHUB_ENV"
       shell: bash
       env:
-        INPUT_API_KEY_HYPHEN: ${{ inputs.api-key }}
-        INPUT_API_KEY_UNDERSCORE: ${{ inputs.api_key }}
+        DD_API_KEY_INPUT: ${{ inputs.api-key != '' && inputs.api-key || inputs.api_key }}
     - name: Print summary
       run: |
         echo "---" >> $GITHUB_STEP_SUMMARY
@@ -229,10 +219,10 @@ runs:
         fi
         echo "---" >> $GITHUB_STEP_SUMMARY
 
-        if [ "$INPUT_PRINT_GITHUB_STEP_SUMMARY" == "false" ]; then
+        if [ "$PRINT_GITHUB_STEP_SUMMARY" == "false" ]; then
           cat $GITHUB_STEP_SUMMARY
           rm -f $GITHUB_STEP_SUMMARY
         fi
       shell: bash
       env:
-        INPUT_PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
+        PRINT_GITHUB_STEP_SUMMARY: ${{ inputs.print-github-step-summary }}
