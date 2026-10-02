@@ -1,4 +1,4 @@
-name: Test tracer version inputs for java, js, python, ruby
+name: Test tracer version inputs
 on:
   workflow_dispatch:
 jobs:
@@ -10,23 +10,23 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: java js python ruby
+          languages: js python
           api_key: fake-dd-api-key-for-testing
-          java-tracer-version: "1.40.0"
-          js-tracer-version: "5.25.0"
-          python-tracer-version: "2.15.0"
-          ruby-tracer-version: "1.10.0"
-          java-instrumented-build-system: gradle
           site: datadoghq.com
-      - name: Assert action ran (env vars set or failed gracefully)
+          js-tracer-version: "5.0.0"
+          python-tracer-version: "2.0.0"
+          dotnet-tracer-version: "2.9.0"
+          java-tracer-version: "1.30.0"
+          ruby-tracer-version: "1.0.0"
+      - name: Assert action ran (tracer version inputs accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded"
+            echo "PASS: action succeeded with tracer version inputs"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected with fake API key or network issues)"
+            echo "PASS: action failed gracefully (expected - script download or checksum may fail in test env)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

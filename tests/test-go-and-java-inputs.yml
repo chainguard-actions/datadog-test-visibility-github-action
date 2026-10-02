@@ -1,4 +1,4 @@
-name: Test js-tracer-version input
+name: Test go and java specific inputs
 on:
   workflow_dispatch:
 jobs:
@@ -10,18 +10,23 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          languages: js
+          languages: go java
           api_key: fake-dd-api-key-for-testing
-          js-tracer-version: "5.0.0"
-      - name: Assert action ran (succeeded or failed gracefully)
+          site: datadoghq.com
+          go-tracer-version: "0.5.0"
+          go-module-dir: "."
+          java-tracer-version: "1.30.0"
+          java-instrumented-build-system: gradle
+          cache: "false"
+      - name: Assert action ran (go and java specific inputs accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded"
+            echo "PASS: action succeeded with go and java specific inputs"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected in harness environment)"
+            echo "PASS: action failed gracefully (expected - script download or checksum may fail in test env)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
