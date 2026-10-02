@@ -1,4 +1,4 @@
-name: Test java-tracer-repository inputs
+name: Test Java instrumented build system input
 on:
   workflow_dispatch:
 jobs:
@@ -11,19 +11,18 @@ jobs:
         continue-on-error: true
         with:
           languages: java
-          api_key: fake-key-for-testing
-          java-tracer-repository-url: https://repo1.maven.org/maven2
-          java-tracer-repository-auth-header: "Authorization: Bearer fake-token"
-          java-tracer-auth-disable-redirects: "true"
-          cache: "false"
-          print-github-step-summary: "false"
-      - name: Assert action ran with java-tracer-repository inputs
+          api_key: fake-dd-api-key-for-testing
+          java-instrumented-build-system: gradle
+      - name: Assert action ran with java-instrumented-build-system input
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
+          # The action accepts java-instrumented-build-system and passes it as
+          # DD_INSTRUMENTATION_BUILD_SYSTEM_JAVA env var to the install script.
+          # We verify the action ran (success or graceful failure due to network/checksum).
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with java-tracer-repository inputs (outcome: $OUTCOME)"
+            echo "PASS: action ran with java-instrumented-build-system=gradle"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

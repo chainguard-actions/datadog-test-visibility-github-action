@@ -13,23 +13,24 @@ jobs:
           languages: js
           api_key: fake-dd-api-key-for-testing
           service-name: my-deprecated-service
-      - name: Assert DD_SERVICE is set from deprecated service-name input
+      - name: Assert service-name was propagated to DD_SERVICE
         env:
           OUTCOME: ${{ steps.action.outcome }}
           DD_SERVICE_VAL: ${{ env.DD_SERVICE }}
         run: |
           echo "outcome: $OUTCOME"
           echo "DD_SERVICE: $DD_SERVICE_VAL"
-          # The service propagation step runs before the download script,
-          # so DD_SERVICE should be set regardless of download outcome.
-          # If the action succeeded or failed (due to network/checksum), check DD_SERVICE.
-          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            if [ "$DD_SERVICE_VAL" = "my-deprecated-service" ]; then
-              echo "PASS: DD_SERVICE correctly set from service-name"
-            else
-              echo "INFO: DD_SERVICE='$DD_SERVICE_VAL' - env propagation may depend on step order"
-              echo "PASS: action ran (service-name input accepted)"
+          # The action sets DD_SERVICE from service-name input.
+          # If the action succeeded, DD_SERVICE must be set.
+          # If it failed (e.g. network/checksum issue), we still check the env was attempted.
+          if [ "$OUTCOME" = "success" ]; then
+            if [ "$DD_SERVICE_VAL" != "my-deprecated-service" ]; then
+              echo "FAIL: expected DD_SERVICE=my-deprecated-service, got '$DD_SERVICE_VAL'"
+              exit 1
             fi
+            echo "PASS: DD_SERVICE correctly set from service-name"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran (may have failed due to network/checksum in test env)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
