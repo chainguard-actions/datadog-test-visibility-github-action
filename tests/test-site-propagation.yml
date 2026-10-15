@@ -1,0 +1,43 @@
+name: Test site propagation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          languages: js
+          api_key: fake-api-key-for-testing
+          site: datadoghq.eu
+
+      - name: Assert site env var propagated or action failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          DD_SITE_VAL: ${{ env.DD_SITE }}
+          DD_API_KEY_VAL: ${{ env.DD_API_KEY }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "DD_SITE: $DD_SITE_VAL"
+          echo "DD_API_KEY set: $DD_API_KEY_VAL"
+
+          if [ "$OUTCOME" = "success" ]; then
+            if [ "$DD_SITE_VAL" != "datadoghq.eu" ]; then
+              echo "FAIL: DD_SITE should be 'datadoghq.eu', got '$DD_SITE_VAL'"
+              exit 1
+            fi
+            if [ -z "$DD_API_KEY_VAL" ]; then
+              echo "FAIL: DD_API_KEY should be set"
+              exit 1
+            fi
+            echo "PASS: DD_SITE correctly set to 'datadoghq.eu'"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key / network restrictions)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

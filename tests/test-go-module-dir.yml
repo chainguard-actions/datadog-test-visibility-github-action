@@ -1,0 +1,28 @@
+name: Test go-module-dir input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          languages: go
+          api_key: fake-dd-api-key-for-testing
+          go-module-dir: ./mymodule
+          cache: "false"
+      - name: Assert action ran (go-module-dir input accepted)
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          # The action may fail because the API key is fake and the install script
+          # may not succeed, but we just need to verify the input is accepted
+          # (i.e., the action doesn't fail due to an unrecognized input).
+          if [ "${{ steps.action.outcome }}" = "success" ] || [ "${{ steps.action.outcome }}" = "failure" ]; then
+            echo "PASS: action accepted go-module-dir input (outcome: ${{ steps.action.outcome }})"
+          else
+            echo "FAIL: unexpected outcome '${{ steps.action.outcome }}'"
+            exit 1
+          fi

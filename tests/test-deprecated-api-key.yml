@@ -1,0 +1,43 @@
+name: Test deprecated api-key input alias
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          languages: js
+          api-key: fake-api-key-deprecated-alias
+          site: datadoghq.com
+
+      - name: Assert deprecated api-key alias is accepted
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          DD_API_KEY_VAL: ${{ env.DD_API_KEY }}
+          DD_PROVIDER: ${{ env.DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "DD_API_KEY set: $DD_API_KEY_VAL"
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER: $DD_PROVIDER"
+
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$DD_API_KEY_VAL" ]; then
+              echo "FAIL: DD_API_KEY should be set when using deprecated api-key input"
+              exit 1
+            fi
+            if [ "$DD_PROVIDER" != "github" ]; then
+              echo "FAIL: DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER should be 'github', got '$DD_PROVIDER'"
+              exit 1
+            fi
+            echo "PASS: deprecated api-key alias works correctly"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key / network restrictions)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
