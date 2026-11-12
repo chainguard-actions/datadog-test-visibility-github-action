@@ -1,0 +1,26 @@
+name: Test service and site inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: java
+          api_key: dummy-api-key-for-tests
+          site: datadoghq.eu
+          service: my-test-service
+      - name: Assert service and site
+        run: |
+          echo "DD_SERVICE=$DD_SERVICE"
+          echo "DD_SITE=$DD_SITE"
+          if [ "$DD_SERVICE" != "my-test-service" ]; then
+            echo "FAIL: expected DD_SERVICE=my-test-service"; exit 1
+          fi
+          if [ "$DD_SITE" != "datadoghq.eu" ]; then
+            echo "FAIL: expected DD_SITE=datadoghq.eu"; exit 1
+          fi
+          echo "PASS"

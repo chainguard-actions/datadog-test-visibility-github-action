@@ -1,0 +1,27 @@
+name: Test deprecated go-module-dir input has no effect
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: java
+          api_key: dummy-api-key-for-tests
+          go-module-dir: some/module/dir
+      - name: Assert action still configured normally
+        run: |
+          echo "DD_TRACER_VERSION_JAVA=$DD_TRACER_VERSION_JAVA"
+          if [ -z "$DD_TRACER_VERSION_JAVA" ]; then
+            echo "FAIL: DD_TRACER_VERSION_JAVA is empty"; exit 1
+          fi
+          if [ "$DD_API_KEY" != "dummy-api-key-for-tests" ]; then
+            echo "FAIL: DD_API_KEY not propagated"; exit 1
+          fi
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: provider not set to github"; exit 1
+          fi
+          echo "PASS"

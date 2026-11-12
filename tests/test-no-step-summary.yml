@@ -1,0 +1,41 @@
+name: Test custom Java version with cache disabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # NOTE: print-github-step-summary is left at its default (true). Setting it
+      # to 'false' makes the action `rm -f $GITHUB_STEP_SUMMARY`, and act then
+      # fails reading back /var/run/act/workflow/SUMMARY.md after the step
+      # (an act-only limitation, not an action bug).
+      - id: action
+        uses: .
+        with:
+          languages: java
+          api_key: dummy-api-key-for-tests
+          java-tracer-version: '1.50.0'
+          cache: 'false'
+      - name: Assert custom tracer version installed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome=$OUTCOME"
+          echo "DD_TRACER_VERSION_JAVA=$DD_TRACER_VERSION_JAVA"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: action step did not succeed"; exit 1
+          fi
+          if ! echo "$DD_TRACER_VERSION_JAVA" | grep -q "1.50.0"; then
+            echo "FAIL: expected Java tracer version 1.50.0"; exit 1
+          fi
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: provider not set"; exit 1
+          fi
+          if [ "$DD_API_KEY" != "dummy-api-key-for-tests" ]; then
+            echo "FAIL: DD_API_KEY not propagated"; exit 1
+          fi
+          if [ ! -f "$GITHUB_WORKSPACE/.datadog/dd-java-agent.jar" ] && [ ! -f /github/workspace/.datadog/dd-java-agent.jar ]; then
+            echo "FAIL: dd-java-agent.jar not found"; exit 1
+          fi
+          echo "PASS"

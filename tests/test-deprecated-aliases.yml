@@ -1,0 +1,27 @@
+name: Test deprecated input aliases
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: java
+          api_key: new-style-key
+          api-key: legacy-key
+          service: new-service
+          service-name: legacy-service
+      - name: Assert deprecated aliases win
+        run: |
+          echo "DD_API_KEY=$DD_API_KEY"
+          echo "DD_SERVICE=$DD_SERVICE"
+          if [ "$DD_API_KEY" != "legacy-key" ]; then
+            echo "FAIL: expected api-key alias to take precedence"; exit 1
+          fi
+          if [ "$DD_SERVICE" != "legacy-service" ]; then
+            echo "FAIL: expected service-name alias to take precedence"; exit 1
+          fi
+          echo "PASS"

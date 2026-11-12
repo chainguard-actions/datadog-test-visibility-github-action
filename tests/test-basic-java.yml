@@ -1,0 +1,38 @@
+name: Test basic Java instrumentation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          languages: java
+          api_key: dummy-api-key-for-tests
+      - name: Assert environment configured
+        run: |
+          echo "DD_API_KEY=$DD_API_KEY"
+          echo "DD_SITE=$DD_SITE"
+          echo "DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER"
+          echo "DD_TRACER_VERSION_JAVA=$DD_TRACER_VERSION_JAVA"
+          if [ "$DD_API_KEY" != "dummy-api-key-for-tests" ]; then
+            echo "FAIL: DD_API_KEY not propagated"; exit 1
+          fi
+          if [ "$DD_SITE" != "datadoghq.com" ]; then
+            echo "FAIL: DD_SITE should default to datadoghq.com"; exit 1
+          fi
+          if [ "$DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER" != "github" ]; then
+            echo "FAIL: provider not set to github"; exit 1
+          fi
+          if [ -z "$DD_TRACER_VERSION_JAVA" ]; then
+            echo "FAIL: DD_TRACER_VERSION_JAVA is empty"; exit 1
+          fi
+          if [ ! -d "$GITHUB_WORKSPACE/.datadog" ]; then
+            echo "FAIL: .datadog tracer folder not created"; exit 1
+          fi
+          if [ -n "$DD_SERVICE" ]; then
+            echo "FAIL: DD_SERVICE should not be set when no service input given"; exit 1
+          fi
+          echo "PASS"
