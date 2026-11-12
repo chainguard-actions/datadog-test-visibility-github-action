@@ -19,6 +19,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v3.1.0 | [`v3.1.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v3.1.0) | [`d7e3562`](https://github.com/datadog/test-visibility-github-action/commit/d7e3562370d3742851764531da3cb54a743ebd63) | [`HARDENING.md`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/blob/v3.1.0/HARDENING.md) |
 | v3.2.0 | [`v3.2.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v3.2.0) | [`1abae93`](https://github.com/datadog/test-visibility-github-action/commit/1abae93083b69778facd7ee11f89184306c999e6) | [`HARDENING.md`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/blob/v3.2.0/HARDENING.md) |
 | v3.3.0 | [`v3.3.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v3.3.0) | [`7ce545f`](https://github.com/datadog/test-visibility-github-action/commit/7ce545f228901e4ac4ef0b45d946120f1c4124e0) | [`HARDENING.md`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/blob/v3.3.0/HARDENING.md) |
+| v3.4.0 | [`v3.4.0`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/tree/v3.4.0) | [`5edd68f`](https://github.com/datadog/test-visibility-github-action/commit/5edd68fd416710b29ed386e603f4b98606f24282) | [`HARDENING.md`](https://github.com/chainguard-actions/datadog-test-visibility-github-action/blob/v3.4.0/HARDENING.md) |
 
 ## Privacy
 
